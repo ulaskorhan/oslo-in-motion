@@ -4,7 +4,9 @@ A visual transit map prototype for Oslo. The page shows animated sample vehicles
 
 ## Current status
 
-This is a visual prototype. Vehicle routes, positions, and departure estimates are illustrative demo data and are not connected to Ruter or Entur live departures. Do not use the displayed positions or times to plan a real journey.
+Bus and tram route shapes are extracted from the public Entur/Ruter GTFS timetable feed and simplified for display. The map includes common route variants and branches. T-bane lines remain schematic. Vehicle positions, directions, and departure estimates are illustrative demo data and are not connected to live departures. Do not use the displayed positions or times to plan a real journey.
+
+Route data attribution: Contains data under the Norwegian licence for Open Government data (NLOD) distributed by Entur. The shapes have been simplified for display. See [Entur's data terms](https://developer.entur.no/terms-of-service).
 
 ## Run locally
 
