@@ -4,7 +4,7 @@ A visual transit map prototype for Oslo. The page shows animated sample vehicles
 
 ## Current status
 
-T-bane, bus, and tram route shapes are extracted from the public Entur/Ruter GTFS timetable feed and simplified for display. The map includes common route variants and branches. Vehicle positions, directions, and departure estimates are illustrative demo data and are not connected to live departures or vehicle updates. The map has one simulated marker per line, so it does not show how many vehicles are actually at any stop. Do not use the displayed positions or times to plan a real journey.
+The map shows 199 regular Ruter route lines crossing the Oslo map area: bus, night and express bus, trikk, T-bane, and ferry routes. Shapes come from Entur/Ruter's public GTFS timetable feed and are simplified for display. School-only routes are not included. The map does not show individual vehicles or live departures because the published Ruter real-time feeds do not provide vehicle positions here.
 
 Place-name search uses the [Photon geocoder](https://photon.komoot.io/), based on OpenStreetMap data. Browser location is requested only after the user chooses the location button.
 
