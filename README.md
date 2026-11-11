@@ -4,7 +4,7 @@ A visual transit map prototype for Oslo. The page shows scheduled route paths an
 
 ## Current status
 
-The map shows 199 regular Ruter route lines crossing the Oslo map area: bus, night and express bus, trikk, T-bane, and boat/ferry routes. Shapes come from Entur/Ruter's public GTFS timetable feed and are simplified for display. School-only routes are not included. The interface is available in English and Norwegian Bokmål; the selected language is saved in the browser. One illustrative marker per route moves along its shape and updates every 10 seconds. These markers are visual estimates, not vehicle locations, schedules, live departures, or an indication that a service is currently running. The published Ruter real-time feeds do not provide vehicle positions here.
+The map shows 199 regular Ruter route lines crossing the Oslo map area: bus, night and express bus, trikk, T-bane, and boat/ferry routes. Shapes come from Entur/Ruter's public GTFS timetable feed and are simplified for display. School-only routes are not included. The interface is available in English and Norwegian Bokmål; the selected language is saved in the browser. One illustrative marker per route moves along its shape and updates every 2.5 seconds. These markers are visual estimates, not vehicle locations, schedules, live departures, or an indication that a service is currently running. The published Ruter real-time feeds do not provide vehicle positions here.
 
 Place-name search uses the [Photon geocoder](https://photon.komoot.io/), based on OpenStreetMap data. Browser location is requested only after the user chooses the location button.
 

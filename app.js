@@ -155,7 +155,7 @@ function updateEstimatedVehicles(){
     vehicle.marker.setLatLng(pointAlong(vehicle.path,progress));
   }
 }
-updateEstimatedVehicles();setInterval(updateEstimatedVehicles,10000);
+updateEstimatedVehicles();setInterval(updateEstimatedVehicles,2500);
 
 let userMarker=null;
 function setUserPosition(lat,lng,label){
