@@ -6,7 +6,11 @@ A visual transit map prototype for Oslo. The page shows scheduled route paths an
 
 The map shows 199 regular Ruter route lines crossing the Oslo map area: bus, night and express bus, trikk, T-bane, and boat/ferry routes. Shapes come from Entur/Ruter's public GTFS timetable feed and are simplified for display. School-only routes are not included. The interface is available in English and Norwegian Bokmål; the selected language is saved in the browser. One illustrative marker per route moves along its shape and updates every 2.5 seconds. These markers are visual estimates, not vehicle locations, schedules, live departures, or an indication that a service is currently running. The published Ruter real-time feeds do not provide vehicle positions here.
 
+The destination finder searches common Oslo stops and Photon place results, then lists mapped route shapes within 250 metres of the selected point. This is a geographic route lookup, not confirmation that a route stops there. Departure countdowns and ETA-based vehicle placement are not shown because this static route dataset does not include trip arrival times.
+
 Place-name search uses the [Photon geocoder](https://photon.komoot.io/), based on OpenStreetMap data. Browser location is requested only after the user chooses the location button.
+
+After location is shared, the page asks Entur's geocoder for nearby stop places and quays, plots them on the map, and lists their straight-line distance. Selecting a stop loads its upcoming departure estimates from Entur Journey Planner and refreshes every 15 seconds. The browser coordinates are sent to Entur for this lookup. Clicking an illustrative route marker opens its route details; these route markers are not matched to specific service journeys, so their individual last-stop/next-stop times are not available yet.
 
 Route data attribution: Contains data under the Norwegian licence for Open Government data (NLOD) distributed by Entur. The shapes have been simplified for display. See [Entur's data terms](https://developer.entur.no/terms-of-service).
 
