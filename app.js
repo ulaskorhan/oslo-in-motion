@@ -1,6 +1,12 @@
 const routes=window.OSLO_RUTER_ROUTES||[];
 const modes=['bus','tram','metro','boat'];
-const modeLabels={bus:'Bus',tram:'Trikk',metro:'T-bane',boat:'Boat / ferry'};
+const copy={
+  en:{brandSub:'A new way to see the city',network:'ROUTE NETWORK',eyebrow:'The city, in motion',heading:'Oslo’s transit<br>network, mapped.',intro:'Explore every public Ruter route in this map area. Choose bus, tram, T-bane or boat / ferry.',where:'Where are you?',placePlaceholder:'Enter a place in Oslo',locate:'Use my location',placeHelp:'Choose a place or allow location access.',placeCredit:'Place search by <a href="https://photon.komoot.io/" target="_blank" rel="noreferrer">Photon</a> · OpenStreetMap.',search:'Find a line or destination',section:'Ruter routes crossing Oslo',count:'ROUTES',noteTitle:'Vehicle markers are estimates',note:'Each marker illustrates progress along one scheduled route. It is not a live vehicle location and does not reflect actual service, delays or the number of vehicles running. <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">Data terms</a>.',modeGroup:'Choose transport types',all:'All collective transport',bus:'Bus',tram:'Tram',metro:'T-bane',boat:'Boat / ferry',you:'You',status:'ESTIMATED · NOT LIVE',marker:'illustrative position, not live',searchPlaces:'Searching places…',chooseResult:'Choose your place from the results.',noPlaces:'No matching places found in Oslo.',minChars:'Enter at least 3 characters to search.',searchError:'Place search is unavailable right now. Try browser location.',locationUnavailable:'Location is not available in this browser.',waitingLocation:'Waiting for your browser’s location permission…',locationDenied:'Location permission was not granted.',locationFailed:'Could not get your location.',browserLocation:'Your browser location',unnamed:'Unnamed place',title:'Oslo in Motion — transit map',clockLocale:'en-GB'},
+  no:{brandSub:'En ny måte å se byen på',network:'RUTENETT',eyebrow:'Byen i bevegelse',heading:'Oslos kollektivnett<br>på kartet.',intro:'Utforsk Ruters linjer i Oslo-området. Velg buss, trikk, T-bane eller båt / ferge.',where:'Hvor er du?',placePlaceholder:'Skriv inn et sted i Oslo',locate:'Bruk min posisjon',placeHelp:'Søk etter et sted, eller del posisjonen din.',placeCredit:'Stedsøk med <a href="https://photon.komoot.io/" target="_blank" rel="noreferrer">Photon</a> · OpenStreetMap.',search:'Finn en linje eller et reisemål',section:'Ruter-linjer i Oslo-området',count:'LINJER',noteTitle:'Markørene viser anslått bevegelse',note:'Hver markør illustrerer bevegelse langs én rutetrasé. Den viser ikke et faktisk kjøretøy, rutetid, forsinkelse eller hvor mange kjøretøy som er i drift. <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">Datavilkår</a>.',modeGroup:'Velg transporttyper',all:'All kollektivtransport',bus:'Buss',tram:'Trikk',metro:'T-bane',boat:'Båt / ferge',you:'Du',status:'ANSLÅTT · IKKE SANNTID',marker:'anslått posisjon, ikke sanntid',searchPlaces:'Søker etter steder …',chooseResult:'Velg stedet ditt fra trefflisten.',noPlaces:'Fant ingen steder i Oslo som passer.',minChars:'Skriv minst 3 tegn for å søke.',searchError:'Stedsøk er utilgjengelig akkurat nå. Prøv posisjon fra nettleseren.',locationUnavailable:'Posisjon er ikke tilgjengelig i denne nettleseren.',waitingLocation:'Venter på tillatelse til å bruke posisjonen din …',locationDenied:'Du ga ikke tilgang til posisjonen din.',locationFailed:'Kunne ikke hente posisjonen din.',browserLocation:'Posisjonen din fra nettleseren',unnamed:'Ukjent sted',title:'Oslo i bevegelse — kollektivkart',clockLocale:'nb-NO'}
+};
+let language=localStorage.getItem('oslo-in-motion-language')==='no'?'no':'en';
+function text(key){return copy[language][key]||copy.en[key]||key}
+function modeLabel(mode){return text(mode)}
 const map=L.map('map',{zoomControl:false,scrollWheelZoom:true,preferCanvas:true}).setView([59.923,10.755],12);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
 L.control.zoom({position:'bottomright'}).addTo(map);
@@ -26,7 +32,7 @@ for(const route of routes){
     const casing=L.polyline(points,{renderer,color:'#fffdf8',weight:width+2.5,opacity:.9,lineCap:'round',lineJoin:'round'}).addTo(map);
     const line=L.polyline(points,{renderer,color:route.color,weight:width,opacity:.92,lineCap:'round',lineJoin:'round'}).addTo(map);
     casing.routeId=line.routeId=route.id;
-    line.bindPopup(`<strong>${modeLabels[route.mode]} ${escapeHTML(route.line)}</strong><br>${escapeHTML(route.description||route.name||'Ruter route')}`);
+    line.bindPopup(`<strong>${modeLabel(route.mode)} ${escapeHTML(route.line)}</strong><br>${escapeHTML(route.description||route.name||'Ruter route')}`);
     layers.push(casing,line);
     routeLayers.push({layer:casing,mode:route.mode},{layer:line,mode:route.mode});
   }
@@ -38,7 +44,7 @@ for(const route of routes){
     const length=pathLength(path);
     if(length>0){
       const marker=L.marker(path[0],{icon:makeVehicleIcon(route),keyboard:false,zIndexOffset:500}).addTo(map);
-      marker.bindTooltip(`${modeLabels[route.mode]} ${route.line} · illustrative position, not live`,{direction:'top',offset:[0,-10]});
+      marker.bindTooltip(`${modeLabel(route.mode)} ${route.line} · ${text('marker')}`,{direction:'top',offset:[0,-10]});
       vehicleMarkers.push({marker,path,length,route,phase:(routeHash(route.id)%1000)/1000});
     }
   }
@@ -85,9 +91,9 @@ function selectRoute(routeId){
   renderList();
 }
 function renderList(){
-  const visible=routes.filter(route=>selectedModes.has(route.mode)&&(`${route.line} ${route.name} ${route.description} ${modeLabels[route.mode]}`.toLowerCase().includes(query)));
-  routeCount.textContent=`${visible.length} ROUTES`;
-  list.innerHTML=visible.map(route=>`<button class="route-item mode-${route.mode}${selectedRouteId===route.id?' selected':''}" data-route-id="${escapeHTML(route.id)}"><span class="line-badge">${escapeHTML(route.line)}</span><span class="route-text"><span class="route-title">${modeLabels[route.mode]} ${escapeHTML(route.line)}</span><span class="route-description">${escapeHTML(route.description||route.name||'Ruter route')}</span></span><span class="route-chevron">↗</span></button>`).join('');
+  const visible=routes.filter(route=>selectedModes.has(route.mode)&&(`${route.line} ${route.name} ${route.description} ${modeLabel(route.mode)} ${copy.en[route.mode]} ${copy.no[route.mode]}`.toLowerCase().includes(query)));
+  routeCount.textContent=`${visible.length} ${text('count')}`;
+  list.innerHTML=visible.map(route=>`<button class="route-item mode-${route.mode}${selectedRouteId===route.id?' selected':''}" data-route-id="${escapeHTML(route.id)}"><span class="line-badge">${escapeHTML(route.line)}</span><span class="route-text"><span class="route-title">${modeLabel(route.mode)} ${escapeHTML(route.line)}</span><span class="route-description">${escapeHTML(route.description||route.name||'Ruter route')}</span></span><span class="route-chevron">↗</span></button>`).join('');
   list.querySelectorAll('.route-item').forEach(button=>button.addEventListener('click',()=>selectRoute(button.dataset.routeId)));
 }
 
@@ -102,6 +108,43 @@ for(const checkbox of modeChecks){
 }
 document.getElementById('search').addEventListener('input',event=>{query=event.target.value.toLowerCase().trim();renderList()});
 syncModeChecks();applyVisibility();renderList();
+
+function applyLanguage(nextLanguage){
+  language=nextLanguage==='no'?'no':'en';
+  localStorage.setItem('oslo-in-motion-language',language);
+  document.documentElement.lang=language;
+  document.title=text('title');
+  const set=(id,value)=>{const element=document.getElementById(id);if(element)element.textContent=value};
+  set('brand-sub',text('brandSub'));set('network-label',text('network'));set('eyebrow',text('eyebrow'));
+  document.getElementById('main-heading').innerHTML=text('heading');set('intro-copy',text('intro'));
+  set('where-title',text('where'));set('locate-me',text('locate'));set('place-status',text('placeHelp'));
+  document.getElementById('place-search').placeholder=text('placePlaceholder');
+  document.getElementById('place-search').setAttribute('aria-label',text('placePlaceholder'));
+  document.getElementById('photon-credit').innerHTML=text('placeCredit');
+  document.getElementById('place-results').setAttribute('aria-label',language==='no'?'Stedsforslag':'Place suggestions');
+  document.getElementById('search').placeholder=text('search');set('section-title',text('section'));
+  const note=document.getElementById('estimate-note');
+  note.innerHTML=`<strong>${text('noteTitle')}</strong> ${text('note')}`;
+  document.getElementById('mode-group').setAttribute('aria-label',text('modeGroup'));
+  for(const id of ['all','bus','tram','metro','boat'])set(`mode-${id}`,text(id));
+  set('legend-metro',text('metro'));set('legend-tram',text('tram'));set('legend-bus',text('bus'));
+  set('legend-boat',text('boat'));set('legend-you',text('you'));set('map-status-label',text('status'));
+  document.getElementById('locate').title=language==='no'?'Del posisjonen min':'Share my location';
+  document.getElementById('locate').setAttribute('aria-label',document.getElementById('locate').title);
+  document.getElementById('lang-en').classList.toggle('active',language==='en');
+  document.getElementById('lang-no').classList.toggle('active',language==='no');
+  document.getElementById('lang-en').setAttribute('aria-pressed',String(language==='en'));
+  document.getElementById('lang-no').setAttribute('aria-pressed',String(language==='no'));
+  for(const [id,layers] of routeLayersById){
+    const route=routeById.get(id);
+    layers.forEach((layer,index)=>{if(index%2===1)layer.bindPopup(`<strong>${modeLabel(route.mode)} ${escapeHTML(route.line)}</strong><br>${escapeHTML(route.description||route.name||'Ruter route')}`)});
+  }
+  for(const vehicle of vehicleMarkers)vehicle.marker.setTooltipContent(`${modeLabel(vehicle.route.mode)} ${vehicle.route.line} · ${text('marker')}`);
+  updateClock();renderList();
+}
+document.getElementById('lang-en').addEventListener('click',()=>applyLanguage('en'));
+document.getElementById('lang-no').addEventListener('click',()=>applyLanguage('no'));
+applyLanguage(language);
 
 function updateEstimatedVehicles(){
   const elapsed=(Date.now()-estimatedMotionStarted)/1000;
@@ -124,9 +167,9 @@ function setUserPosition(lat,lng,label){
 }
 function requestLocation(){
   const status=document.getElementById('place-status');
-  if(!navigator.geolocation){status.textContent='Location is not available in this browser.';return}
-  status.textContent='Waiting for your browser’s location permission…';
-  navigator.geolocation.getCurrentPosition(position=>setUserPosition(position.coords.latitude,position.coords.longitude,'Your browser location'),error=>{status.textContent=error.code===1?'Location permission was not granted.':'Could not get your location.'},{enableHighAccuracy:false,timeout:10000,maximumAge:30000});
+  if(!navigator.geolocation){status.textContent=text('locationUnavailable');return}
+  status.textContent=text('waitingLocation');
+  navigator.geolocation.getCurrentPosition(position=>setUserPosition(position.coords.latitude,position.coords.longitude,text('browserLocation')),error=>{status.textContent=error.code===1?text('locationDenied'):text('locationFailed')},{enableHighAccuracy:false,timeout:10000,maximumAge:30000});
 }
 document.getElementById('locate').addEventListener('click',requestLocation);
 document.getElementById('locate-me').addEventListener('click',requestLocation);
@@ -137,30 +180,31 @@ const placeResults=document.getElementById('place-results');
 let placeTimer=null,placeController=null,lastPlaceQuery=0,foundPlaces=[];
 function searchPlaces(){
   const text=placeInput.value.trim();placeResults.replaceChildren();
-  if(text.length<3){placeStatus.textContent='Enter at least 3 characters to search.';return}
+  if(text.length<3){placeStatus.textContent=windowText('minChars');return}
   if(placeController)placeController.abort();
-  placeController=new AbortController();placeStatus.textContent='Searching places…';
+  placeController=new AbortController();placeStatus.textContent=windowText('searchPlaces');
   const delay=Math.max(0,1000-(Date.now()-lastPlaceQuery));
   setTimeout(async()=>{
     if(placeInput.value.trim()!==text)return;
     lastPlaceQuery=Date.now();
     try{
       const url=new URL('https://photon.komoot.io/api/');
-      url.searchParams.set('q',text);url.searchParams.set('lat','59.9139');url.searchParams.set('lon','10.7522');url.searchParams.set('bbox','10.3,59.65,11.7,60.3');url.searchParams.set('limit','5');url.searchParams.set('lang','en');
+      url.searchParams.set('q',text);url.searchParams.set('lat','59.9139');url.searchParams.set('lon','10.7522');url.searchParams.set('bbox','10.3,59.65,11.7,60.3');url.searchParams.set('limit','5');url.searchParams.set('lang',language==='no'?'no':'en');
       const response=await fetch(url,{signal:placeController.signal});if(!response.ok)throw new Error('Place search unavailable');
       const data=await response.json();foundPlaces=data.features||[];placeResults.replaceChildren();
       foundPlaces.forEach(feature=>{
         const properties=feature.properties||{};
         const label=[properties.name,properties.street,properties.city||properties.locality,properties.state].filter((value,index,array)=>value&&array.indexOf(value)===index).join(', ');
-        const option=document.createElement('button');option.type='button';option.className='place-result';option.setAttribute('role','option');option.textContent=label||properties.name||'Unnamed place';
+        const option=document.createElement('button');option.type='button';option.className='place-result';option.setAttribute('role','option');option.textContent=label||properties.name||windowText('unnamed');
         option.addEventListener('click',()=>{const [longitude,latitude]=feature.geometry.coordinates;setUserPosition(latitude,longitude,option.textContent);placeInput.value=option.textContent;placeResults.replaceChildren()});placeResults.append(option);
       });
-      placeStatus.textContent=foundPlaces.length?'Choose your place from the results.':'No matching places found in Oslo.';
-    }catch(error){if(error.name!=='AbortError')placeStatus.textContent='Place search is unavailable right now. Try browser location.'}
+      placeStatus.textContent=foundPlaces.length?windowText('chooseResult'):windowText('noPlaces');
+    }catch(error){if(error.name!=='AbortError')placeStatus.textContent=windowText('searchError')}
   },delay);
 }
-placeInput.addEventListener('input',()=>{clearTimeout(placeTimer);foundPlaces=[];if(placeInput.value.trim().length<3){placeResults.replaceChildren();placeStatus.textContent='Choose a place or allow location access.';return}placeTimer=setTimeout(searchPlaces,550)});
+placeInput.addEventListener('input',()=>{clearTimeout(placeTimer);foundPlaces=[];if(placeInput.value.trim().length<3){placeResults.replaceChildren();placeStatus.textContent=windowText('placeHelp');return}placeTimer=setTimeout(searchPlaces,550)});
 placeInput.addEventListener('keydown',event=>{if(event.key==='Enter'&&foundPlaces.length){event.preventDefault();placeResults.querySelector('.place-result')?.click()}});
 
-function updateClock(){document.getElementById('clock').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())}
+function windowText(key){return copy[language][key]||copy.en[key]||key}
+function updateClock(){document.getElementById('clock').textContent=new Intl.DateTimeFormat(text('clockLocale'),{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())}
 updateClock();setInterval(updateClock,1000);
