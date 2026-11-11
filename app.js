@@ -1,6 +1,6 @@
 const routes=window.OSLO_RUTER_ROUTES||[];
 const modes=['bus','tram','metro','boat'];
-const modeLabels={bus:'Bus',tram:'Trikk',metro:'T-bane',boat:'Ferry'};
+const modeLabels={bus:'Bus',tram:'Trikk',metro:'T-bane',boat:'Boat / ferry'};
 const map=L.map('map',{zoomControl:false,scrollWheelZoom:true,preferCanvas:true}).setView([59.923,10.755],12);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
 L.control.zoom({position:'bottomright'}).addTo(map);
@@ -10,6 +10,15 @@ const routeLayersById=new Map();
 const routeById=new Map(routes.map(route=>[route.id,route]));
 const renderer=L.canvas({padding:.4});
 const routeStyles=new Map();
+const vehicleMarkers=[];
+const modeSpeeds={bus:19,tram:16,metro:34,boat:13};
+const modeGlyphs={bus:'B',tram:'T',metro:'M',boat:'⌁'};
+const modeColors={bus:'#087343',tram:'#a84600',metro:'#1749a5',boat:'#00677e'};
+const estimatedMotionStarted=Date.now();
+function routeHash(text){let value=0;for(const character of text)value=(value*31+character.charCodeAt(0))>>>0;return value}
+function pathLength(points){let total=0;for(let i=1;i<points.length;i++)total+=map.distance(points[i-1],points[i]);return total}
+function pointAlong(points,distance){for(let i=1;i<points.length;i++){const segment=map.distance(points[i-1],points[i]);if(distance<=segment){const ratio=segment?distance/segment:0;return [points[i-1][0]+(points[i][0]-points[i-1][0])*ratio,points[i-1][1]+(points[i][1]-points[i-1][1])*ratio]};distance-=segment}return points[points.length-1]}
+function makeVehicleIcon(route){return L.divIcon({className:'estimated-vehicle-pin',html:`<span class="estimated-vehicle mode-${route.mode}" style="--vehicle-color:${modeColors[route.mode]}">${modeGlyphs[route.mode]}</span>`,iconSize:[22,22],iconAnchor:[11,11]})}
 for(const route of routes){
   const layers=[];
   const width=route.mode==='bus'?2.6:3.4;
@@ -23,6 +32,16 @@ for(const route of routes){
   }
   routeLayersById.set(route.id,layers);
   routeStyles.set(route.id,{width,opacity:.92});
+  const paths=(route.paths||[route.points]).filter(points=>points&&points.length>1);
+  if(paths.length){
+    const path=paths[routeHash(route.id)%paths.length];
+    const length=pathLength(path);
+    if(length>0){
+      const marker=L.marker(path[0],{icon:makeVehicleIcon(route),keyboard:false,zIndexOffset:500}).addTo(map);
+      marker.bindTooltip(`${modeLabels[route.mode]} ${route.line} · illustrative position, not live`,{direction:'top',offset:[0,-10]});
+      vehicleMarkers.push({marker,path,length,route,phase:(routeHash(route.id)%1000)/1000});
+    }
+  }
 }
 
 const stops=[['Jernbanetorget',59.9128,10.7500],['Nationaltheatret',59.9153,10.7352],['Majorstuen',59.9295,10.7148],['Stortinget',59.9133,10.7460],['Tøyen',59.9146,10.7771],['Grønland',59.9134,10.7613],['Nydalen',59.9554,10.7677],['Blindern',59.9405,10.7167],['Borgen',59.9348,10.6907],['Carl Berners plass',59.9259,10.7773],['Bjørvika',59.9076,10.7572],['Aker brygge',59.9112,10.7275],['Ullevål stadion',59.9491,10.7336],['Ensjø',59.9125,10.7833],['Storo',59.9470,10.7777],['Helsfyr',59.9110,10.8000]];
@@ -47,6 +66,10 @@ function applyVisibility(){
   for(const item of routeLayers){
     if(selectedModes.has(item.mode))item.layer.addTo(map);
     else map.removeLayer(item.layer);
+  }
+  for(const vehicle of vehicleMarkers){
+    if(selectedModes.has(vehicle.route.mode))vehicle.marker.addTo(map);
+    else map.removeLayer(vehicle.marker);
   }
 }
 function selectRoute(routeId){
@@ -79,6 +102,17 @@ for(const checkbox of modeChecks){
 }
 document.getElementById('search').addEventListener('input',event=>{query=event.target.value.toLowerCase().trim();renderList()});
 syncModeChecks();applyVisibility();renderList();
+
+function updateEstimatedVehicles(){
+  const elapsed=(Date.now()-estimatedMotionStarted)/1000;
+  for(const vehicle of vehicleMarkers){
+    const speed=(modeSpeeds[vehicle.route.mode]||18)/3.6;
+    const duration=vehicle.length/speed;
+    const progress=((vehicle.phase+elapsed/duration)%1)*vehicle.length;
+    vehicle.marker.setLatLng(pointAlong(vehicle.path,progress));
+  }
+}
+updateEstimatedVehicles();setInterval(updateEstimatedVehicles,10000);
 
 let userMarker=null;
 function setUserPosition(lat,lng,label){
