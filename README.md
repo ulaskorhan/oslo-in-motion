@@ -1,23 +1,43 @@
 # Oslo in Motion
 
-A visual transit map prototype for Oslo. The page shows scheduled route paths and illustrative moving markers over an OpenStreetMap street map, with route filters and an optional user location marker.
+A live-looking transit map of Oslo: every scheduled Ruter vehicle, placed where the day's timetable says it should be. Where Entur has realtime estimates, the timetable is adjusted with them.
 
-## Current status
+## What the map shows
 
-The map shows 199 regular Ruter route lines crossing the Oslo map area: bus, night and express bus, trikk, T-bane, and boat/ferry routes. Shapes come from Entur/Ruter's public GTFS timetable feed and are simplified for display. School-only routes are not included. The interface is available in English and Norwegian Bokmål; the selected language is saved in the browser. One illustrative marker per route moves along its shape and updates every 2.5 seconds. These markers are visual estimates, not vehicle locations, schedules, live departures, or an indication that a service is currently running. The published Ruter real-time feeds do not provide vehicle positions here.
+- **All 199 regular Ruter lines** crossing the Oslo map area: T-bane, trikk, city and regional bus, and boats. Shapes come from Entur/Ruter's GTFS feed, simplified for display.
+- **One marker per running trip.** At a typical weekday evening that's about 400 vehicles. Positions come from the stop-by-stop timetable and are interpolated along the route shape between stops. Vehicles dwell at stops for as long as the timetable says.
+- **Realtime adjustment.** T-bane, trikk and boat trips (and every trip on a line you select or click) are refreshed every 30 s from Entur's Journey Planner. Those markers use expected and actual stop times, and get a green ring. Other markers follow the published timetable.
+- **Trip details.** Click a vehicle to see its upcoming stops. Scheduled times are struck through next to the expected times, alongside the delay and a "follow vehicle" option.
+- **Direct rides.** Set where you are and where you're going. The page lists the next direct departures within walking distance, with departure and arrival times from the timetable.
+- **Nearby stop departure boards** come from Entur realtime and refresh every 20 s.
+- English and Norwegian Bokmål, plus light and dark themes.
 
-The destination finder searches common Oslo stops and Photon place results, then lists mapped route shapes within 250 metres of the selected point. This is a geographic route lookup, not confirmation that a route stops there. Departure countdowns and ETA-based vehicle placement are not shown because this static route dataset does not include trip arrival times.
+Ruter does not publish vehicle GPS positions (Entur's vehicle feed has none for `RUT`). The markers are therefore timetable/realtime estimates, not GPS fixes, and the page says so.
 
-Place-name search uses the [Photon geocoder](https://photon.komoot.io/), based on OpenStreetMap data. Browser location is requested only after the user chooses the location button.
+## How the data works
 
-After location is shared, the page asks Entur's geocoder for nearby stop places and quays, plots them on the map, and lists their straight-line distance. Selecting a stop loads its upcoming departure estimates from Entur Journey Planner and refreshes every 15 seconds. The browser coordinates are sent to Entur for this lookup. Clicking an illustrative route marker opens its route details; these route markers are not matched to specific service journeys, so their individual last-stop/next-stop times are not available yet.
+`tools/build_timetable.py` downloads every mapped line's service journeys for a date from Entur Journey Planner. It compresses them into `data/timetable-YYYY-MM-DD.json` (about 1.2 MB, or 500 KB gzipped, for a weekday). Each entry holds stop patterns, time offsets, each stop's distance along the drawn shape, and trip start times. The browser loads today's file, plus yesterday's between midnight and 06:00 for after-midnight trips.
 
-Route data attribution: Contains data under the Norwegian licence for Open Government data (NLOD) distributed by Entur. The shapes have been simplified for display. See [Entur's data terms](https://developer.entur.no/terms-of-service).
+```bash
+python3 tools/build_timetable.py            # today + tomorrow (Oslo time)
+python3 tools/build_timetable.py 2026-12-24 # a specific date
+```
+
+The GitHub Action in `.github/workflows/timetable.yml` runs this every night at about 03:15 Oslo time and commits the result, so GitHub Pages always serves current timetables. It needs **Settings → Actions → General → Workflow permissions → Read and write**. You can also run it by hand from the Actions tab. If the file for today is missing, the page says so instead of showing invented positions.
 
 ## Run locally
 
-Open `index.html` in a browser. The map and fonts are loaded from public services, so an internet connection is needed. Browser location access works on secure pages such as GitHub Pages and localhost; the page asks only after the user selects the location button.
+Serve the folder with any static server. Opening it as a `file://` URL won't work, because the timetable is fetched:
 
-## Hosting
+```bash
+python3 -m http.server 8765
+```
 
-The site is a static page and can be hosted with GitHub Pages from the repository root. Map tiles come from OpenStreetMap and require OpenStreetMap attribution.
+Then open http://localhost:8765.
+
+## Attribution
+
+- Timetable, realtime and stop data: Entur, under the Norwegian licence for Open Government data (NLOD). See [Entur's terms](https://developer.entur.no/terms-of-service).
+- Basemap: © [Kartverket](https://www.kartverket.no/) (topografisk gråtone).
+- Place search: [Photon](https://photon.komoot.io/), based on OpenStreetMap data.
+- Browser location is requested only after the user chooses the location button. The coordinates are sent to Entur to find nearby stops.
