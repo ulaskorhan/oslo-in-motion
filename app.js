@@ -224,6 +224,7 @@ function styleRoutes() {
   for (const { route, lines, casings } of routeLayers.values()) {
     const visible = selectedModes.has(route.mode);
     const base = lineStyle(route, zoom);
+    if (zoom >= 15) base.opacity *= 0.55; // let the vehicle shapes stand out on the track
     const dim = focus && focus !== route.id;
     for (const layer of lines) {
       if (!visible) { layer.remove(); continue; }
@@ -241,9 +242,10 @@ function styleRoutes() {
   const route = focus && routeById.get(focus);
   if (route) {
     const base = lineStyle(route, zoom);
+    const street = zoom >= 15; // thinner, softer highlight so vehicle shapes read on top of it
     for (const path of routePaths(route)) {
-      highlightLayers.push(L.polyline(path, { renderer: renderers['routes-selected'], interactive: false, color: palette.panel, weight: base.weight + 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map));
-      highlightLayers.push(L.polyline(path, { renderer: renderers['routes-selected'], interactive: false, color: base.color, weight: base.weight + 2.5, opacity: 1, lineCap: 'round', lineJoin: 'round' }).addTo(map));
+      highlightLayers.push(L.polyline(path, { renderer: renderers['routes-selected'], interactive: false, color: palette.panel, weight: base.weight + (street ? 3 : 6), opacity: street ? 0.6 : 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map));
+      highlightLayers.push(L.polyline(path, { renderer: renderers['routes-selected'], interactive: false, color: base.color, weight: street ? base.weight : base.weight + 2.5, opacity: street ? 0.5 : 1, lineCap: 'round', lineJoin: 'round' }).addTo(map));
     }
     drawSelectedStops(route);
   } else {
@@ -350,7 +352,7 @@ function tripPosition(trip, state) {
   const di = pattern.d?.[i], dj = pattern.d?.[j];
   if (pattern.p != null && di != null && dj != null && dj >= di) {
     const prepared = preparedPath(trip.route, pattern.p, pattern.r);
-    if (prepared) return pointAlong(prepared, di + (dj - di) * state.f);
+    if (prepared) { const distance = di + (dj - di) * state.f; return { ...pointAlong(prepared, distance), prepared, distance }; }
   }
   const a = quays[pattern.s[i]], b = quays[pattern.s[Math.min(j + (i === j ? 1 : 0), pattern.s.length - 1)]];
   const f = i === j ? 0 : state.f;
@@ -463,9 +465,27 @@ const VehicleLayer = L.Layer.extend({
     drawVehicles(this.ctx, this.ratio);
   }
 });
+const SILHOUETTE_ZOOM = 15;
+const VEHICLE_SPECS = {
+  bus: { segments: [12], width: 2.55, gap: 0, minLength: 30, minWidth: 12 },
+  tram: { segments: [11.4, 10.8, 11.4], width: 2.65, gap: 0.5, minLength: 54, minWidth: 12 },
+  metro: { segments: [18, 18, 18, 18, 18, 18], width: 3.2, gap: 0.7, minLength: 84, minWidth: 13 },
+  boat: { segments: [34], width: 9, gap: 0, minLength: 44, minWidth: 16 }
+};
 let drawn = []; // [{trip, x, y}] for hit-testing
 const vehicleLayer = new VehicleLayer().addTo(map);
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+/* Top-down vehicle shapes (zoom ≥ 15). Real dimensions in metres; when zoomed out the
+ * whole vehicle is scaled up uniformly to a minimum on-screen length so it stays readable,
+ * and it converges to true scale as you zoom in. Cars follow the route shape. */
+function vehicleSegments(route) {
+  const spec = VEHICLE_SPECS[route.mode] || VEHICLE_SPECS.bus;
+  // Line 1 (Holmenkollbanen to Frognerseteren) runs 3-car trains; other T-bane lines 6 cars.
+  return route.mode === 'metro' && route.line === '1' ? spec.segments.slice(0, 3) : spec.segments;
+}
+function metresPerPixel() {
+  return 40075016.686 * Math.cos(map.getCenter().lat * Math.PI / 180) / (256 * 2 ** map.getZoom());
+}
 function drawVehicles(ctx, ratio) {
   const size = map.getSize();
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -474,8 +494,11 @@ function drawVehicles(ctx, ratio) {
   const now = Date.now(), zoom = map.getZoom();
   const focus = selectedRouteId();
   const selectedTrip = selection?.type === 'trip' ? selection.trip : null;
+  const silhouettes = zoom >= SILHOUETTE_ZOOM;
   const labels = zoom >= 14;
   const radius = zoom <= 11 ? 2.6 : zoom <= 12 ? 3.6 : 5;
+  const mpp = metresPerPixel();
+  const margin = silhouettes ? 160 : 30;
   const list = [];
   for (const trip of activeTrips) {
     if (!selectedModes.has(trip.route.mode)) continue;
@@ -483,24 +506,24 @@ function drawVehicles(ctx, ratio) {
     if (state.before || state.after) continue;
     const pos = tripPosition(trip, state);
     const p = map.latLngToContainerPoint([pos.lat, pos.lng]);
-    if (p.x < -30 || p.y < -30 || p.x > size.x + 30 || p.y > size.y + 30) continue;
+    if (p.x < -margin || p.y < -margin || p.x > size.x + margin || p.y > size.y + margin) continue;
     const ahead = map.latLngToContainerPoint(pos.ahead), behind = map.latLngToContainerPoint(pos.behind);
     const angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x);
     const rank = trip === selectedTrip ? 3 : trip.routeId === focus ? 2 : focus ? 0 : 1;
-    list.push({ trip, x: p.x, y: p.y, angle, rank, live: !!trip.rt?.live });
+    list.push({ trip, x: p.x, y: p.y, angle, rank, live: !!trip.rt?.live, pos });
   }
   list.sort((a, b) => a.rank - b.rank || (a.trip.route.mode === 'bus') - (b.trip.route.mode === 'bus'));
-  ctx.font = "600 10.5px 'DM Mono', monospace";
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const item of list) {
     const { trip, x, y, angle, rank, live } = item;
     const color = palette[colorKey(trip.route)];
     ctx.globalAlpha = rank === 0 ? 0.25 : 1;
-    const big = labels || rank >= 2;
-    if (big) {
+    if (silhouettes) {
+      drawSilhouette(ctx, item, color, mpp);
+    } else if (labels || rank >= 2) {
+      ctx.font = "600 10.5px 'DM Mono', monospace";
       const text = trip.route.line;
       const w = Math.max(22, ctx.measureText(text).width + 10), h = 17;
-      // heading wedge
       ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
       ctx.beginPath(); ctx.moveTo(w / 2 + 6, 0); ctx.lineTo(w / 2 - 1, -5); ctx.lineTo(w / 2 - 1, 5); ctx.closePath();
       ctx.fillStyle = color; ctx.fill(); ctx.restore();
@@ -519,6 +542,109 @@ function drawVehicles(ctx, ratio) {
   }
   ctx.globalAlpha = 1;
 }
+function drawSilhouette(ctx, item, color, mpp) {
+  const route = item.trip.route, mode = route.mode;
+  const spec = VEHICLE_SPECS[mode] || VEHICLE_SPECS.bus;
+  const segments = vehicleSegments(route);
+  const realLength = segments.reduce((sum, s) => sum + s, 0) + spec.gap * (segments.length - 1);
+  const k = Math.max(1, (spec.minLength * mpp) / realLength); // uniform display scale
+  const width = Math.max(spec.width / mpp, spec.minWidth);
+  const { pos } = item;
+  // Screen point at `offset` display-metres behind the vehicle centre, following the track.
+  const at = offset => {
+    if (pos.prepared) {
+      const p = pointAlong(pos.prepared, pos.distance - offset);
+      return map.latLngToContainerPoint([p.lat, p.lng]);
+    }
+    return { x: item.x - Math.cos(item.angle) * offset / mpp, y: item.y - Math.sin(item.angle) * offset / mpp };
+  };
+  let offset = -(realLength * k) / 2;
+  const parts = segments.map((segment, index) => {
+    const front = at(offset), back = at(offset + segment * k);
+    offset += (segment + spec.gap) * k;
+    const length = Math.max(Math.hypot(front.x - back.x, front.y - back.y), segment * k / mpp * 0.6);
+    return { cx: (front.x + back.x) / 2, cy: (front.y + back.y) / 2, angle: Math.atan2(front.y - back.y, front.x - back.x), length, index };
+  });
+  item.points = parts.map(part => ({ x: part.cx, y: part.cy }));
+  if (mode === 'boat') drawWake(ctx, parts[0], width);
+  // Couplings between cars, drawn under the bodies.
+  ctx.strokeStyle = shade(color, -0.35); ctx.lineWidth = width * 0.5; ctx.lineCap = 'butt';
+  for (let i = 1; i < parts.length; i++) { ctx.beginPath(); ctx.moveTo(parts[i - 1].cx, parts[i - 1].cy); ctx.lineTo(parts[i].cx, parts[i].cy); ctx.stroke(); }
+  for (const part of parts) {
+    ctx.save(); ctx.translate(part.cx, part.cy); ctx.rotate(part.angle);
+    drawBody(ctx, mode, part.length, width, color, part.index, parts.length, item);
+    ctx.restore();
+  }
+  // Line number on the leading car, kept upright.
+  const lead = parts[0];
+  ctx.font = `700 ${Math.max(9, Math.min(12, width * 0.85))}px 'DM Mono', monospace`;
+  ctx.lineWidth = 3; ctx.strokeStyle = shade(color, -0.45); ctx.lineJoin = 'round';
+  ctx.strokeText(route.line, lead.cx, lead.cy + 0.5);
+  ctx.fillStyle = '#fff'; ctx.fillText(route.line, lead.cx, lead.cy + 0.5);
+}
+function drawBody(ctx, mode, L, W, color, index, count, item) {
+  const front = index === 0, rear = index === count - 1;
+  // Shadow, then realtime ring (outside), white edge, and the body fill on top of the strokes' inner half.
+  const paint = () => {
+    ctx.save(); ctx.shadowColor = 'rgba(10,15,12,.45)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2; ctx.fillStyle = color; ctx.fill(); ctx.restore();
+    if (item.rank === 3) { ctx.lineWidth = 9; ctx.strokeStyle = color; ctx.globalAlpha *= 0.3; ctx.stroke(); ctx.globalAlpha /= 0.3; }
+    if (item.live) { ctx.lineWidth = 5.5; ctx.strokeStyle = palette.good; ctx.stroke(); }
+    ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.fillStyle = color; ctx.fill();
+  };
+  const dark = 'rgba(15,20,18,.55)', light = 'rgba(255,255,255,.28)';
+  if (mode === 'boat') {
+    ctx.beginPath();
+    ctx.moveTo(-L / 2, -W / 2 + 1); ctx.lineTo(L / 2 - W * 0.9, -W / 2);
+    ctx.quadraticCurveTo(L / 2, -W * 0.2, L / 2, 0);
+    ctx.quadraticCurveTo(L / 2, W * 0.2, L / 2 - W * 0.9, W / 2);
+    ctx.lineTo(-L / 2, W / 2 - 1); ctx.closePath();
+    paint();
+    roundRect(ctx, -L * 0.32, -W * 0.3, L * 0.5, W * 0.6, 2); ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.fill();
+    ctx.fillStyle = dark; ctx.fillRect(L * 0.1, -W * 0.22, 2, W * 0.44);
+    return;
+  }
+  const r = mode === 'bus' ? W * 0.3 : mode === 'tram' && (front || rear) ? W * 0.45 : 2.2;
+  roundRect(ctx, -L / 2, -W / 2, L, W, Math.min(r, L / 2));
+  paint();
+  // roof detail
+  ctx.fillStyle = light;
+  if (mode === 'bus') {
+    ctx.fillRect(-L * 0.18, -W * 0.18, L * 0.12, W * 0.36);
+    ctx.fillRect(-L * 0.38, -W * 0.18, L * 0.12, W * 0.36);
+  } else if (mode === 'metro') {
+    ctx.fillRect(-L / 2 + 3, -0.8, L - 6, 1.6);
+  } else if (mode === 'tram' && index === Math.floor(count / 2)) {
+    ctx.strokeStyle = light; ctx.lineWidth = 1.4; ctx.beginPath();
+    ctx.moveTo(-W * 0.35, -W * 0.3); ctx.lineTo(W * 0.35, W * 0.3); ctx.moveTo(-W * 0.35, W * 0.3); ctx.lineTo(W * 0.35, -W * 0.3); ctx.stroke();
+  }
+  // windscreens: front of the lead car; trains and trams also have a cab at the rear
+  ctx.fillStyle = dark;
+  const band = Math.max(2, Math.min(W * 0.32, L * 0.12));
+  if (front) roundRect(ctx, L / 2 - band - 1.5, -W / 2 + 1.8, band, W - 3.6, 1.5), ctx.fill();
+  if (rear && mode !== 'bus') { roundRect(ctx, -L / 2 + 1.5, -W / 2 + 1.8, band * 0.8, W - 3.6, 1.5); ctx.fill(); }
+  if (rear && mode === 'bus') { ctx.fillRect(-L / 2 + 1.5, -W / 2 + 2.5, band * 0.45, W - 5); }
+  if (mode === 'bus' && front) { // mirrors
+    ctx.fillStyle = color;
+    ctx.fillRect(L / 2 - band - 2, -W / 2 - 2, 2.5, 2); ctx.fillRect(L / 2 - band - 2, W / 2, 2.5, 2);
+  }
+}
+function drawWake(ctx, part, W) {
+  ctx.save(); ctx.translate(part.cx, part.cy); ctx.rotate(part.angle);
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.2;
+  for (const side of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(-part.length / 2, side * W * 0.35);
+    ctx.quadraticCurveTo(-part.length * 0.9, side * W * 0.7, -part.length * 1.4, side * W * 1.3); ctx.stroke();
+  }
+  ctx.restore();
+}
+function shade(hex, amount) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return hex || '#000';
+  const n = parseInt(m[1], 16);
+  const f = c => Math.round(Math.max(0, Math.min(255, amount < 0 ? c * (1 + amount) : c + (255 - c) * amount)));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
 let lastFrame = 0;
 function animate(time) {
   if (time - lastFrame > 120) { lastFrame = time; vehicleLayer.draw(); }
@@ -532,8 +658,10 @@ function hitVehicle(point, tolerance = 14) {
   for (let i = drawn.length - 1; i >= 0; i--) {
     const item = drawn[i];
     if (item.rank === 0) continue;
-    const distance = Math.hypot(item.x - point.x, item.y - point.y);
-    if (distance < bestDistance) { best = item; bestDistance = distance; }
+    for (const p of item.points || [item]) {
+      const distance = Math.hypot(p.x - point.x, p.y - point.y);
+      if (distance < bestDistance) { best = item; bestDistance = distance; }
+    }
   }
   return best;
 }
@@ -632,8 +760,42 @@ function renderDetail(force = false) {
   }));
   if (force) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
+/* Side-view pictures for the detail card: flat shapes, coloured by mode via CSS. */
+function vehicleArt(route) {
+  const line = escapeHTML(route.line);
+  const wheel = x => `<circle class="va-wheel" cx="${x}" cy="47" r="6.5"/><circle class="va-hub" cx="${x}" cy="47" r="2.4"/>`;
+  const windows = (from, to, y, h, w = 16, gap = 5) => { let out = ''; for (let x = from; x + w <= to; x += w + gap) out += `<rect class="va-window" x="${x}" y="${y}" width="${w}" height="${h}" rx="2"/>`; return out; };
+  let body;
+  if (route.mode === 'bus') {
+    body = `<rect class="va-body" x="14" y="10" width="206" height="36" rx="7"/>
+      ${windows(24, 186, 16, 13, 18, 4)}<rect class="va-window" x="196" y="14" width="18" height="22" rx="3"/>
+      <rect class="va-door" x="160" y="16" width="14" height="28" rx="1.5"/><rect class="va-door" x="92" y="16" width="14" height="28" rx="1.5"/>
+      <rect class="va-sign" x="176" y="11.5" width="34" height="5" rx="1"/><text class="va-sign-text" x="193" y="15.6">${line}</text>
+      ${wheel(48)}${wheel(186)}`;
+  } else if (route.mode === 'tram') {
+    body = `<path class="va-body" d="M14 30 Q14 12 30 12 H82 V44 H20 Q14 44 14 38Z"/><rect class="va-body" x="84" y="12" width="68" height="32"/>
+      <path class="va-body" d="M154 12 H210 Q226 12 226 30 V38 Q226 44 220 44 H154Z"/>
+      <path class="va-pan" d="M104 12 L118 3 L132 12 M110 3 H126"/>
+      ${windows(24, 80, 17, 12, 12, 4)}${windows(90, 150, 17, 12, 12, 4)}${windows(158, 210, 17, 12, 12, 4)}
+      <path class="va-window" d="M214 16 Q222 18 222 28 H214Z"/><path class="va-window" d="M26 16 Q18 18 18 28 H26Z"/>
+      <rect class="va-sign" x="196" y="13" width="22" height="4" rx="1"/><text class="va-sign-text" x="207" y="16.3">${line}</text>
+      <rect class="va-skirt" x="14" y="42" width="212" height="3"/>${wheel(44)}${wheel(118)}${wheel(196)}`;
+  } else if (route.mode === 'metro') {
+    const car = (x, cab) => `<rect class="va-body" x="${x}" y="10" width="72" height="34" rx="${cab ? 6 : 2}"/>${windows(x + 8, x + 66, 16, 12, 12, 5)}<rect class="va-door" x="${x + 30}" y="15" width="10" height="27" rx="1"/>`;
+    body = `${car(8, true)}${car(83, false)}${car(158, true)}<rect class="va-window" x="220" y="15" width="7" height="14" rx="2"/>
+      <rect class="va-sign" x="206" y="11.5" width="18" height="4" rx="1"/><text class="va-sign-text" x="215" y="14.8">${line}</text>
+      ${wheel(24)}${wheel(64)}${wheel(99)}${wheel(139)}${wheel(174)}${wheel(214)}`;
+  } else {
+    body = `<path class="va-wave" d="M0 49 Q15 45 30 49 T60 49 T90 49 T120 49 T150 49 T180 49 T210 49 T240 49"/>
+      <path class="va-body" d="M10 30 H222 Q216 44 200 46 H24 Q14 44 10 30Z"/>
+      <rect class="va-cabin" x="44" y="14" width="130" height="16" rx="4"/><rect class="va-cabin" x="140" y="5" width="30" height="10" rx="3"/>
+      ${windows(52, 168, 18, 8, 12, 5)}<rect class="va-window" x="146" y="8" width="18" height="5" rx="1.5"/>
+      <text class="va-hull-text" x="110" y="40">${line}</text>`;
+  }
+  return `<div class="vehicle-art mode-${colorKey(route)}" aria-hidden="true"><svg viewBox="0 0 240 56" role="presentation">${body}</svg></div>`;
+}
 function headHTML(route, title, subtitle) {
-  return `<div class="detail-head mode-${colorKey(route)}"><span class="badge mode-${colorKey(route)}">${escapeHTML(route.line)}</span><div class="detail-title">${title}<small>${subtitle}</small></div><button type="button" class="icon-close" aria-label="${escapeHTML(t('close'))}">×</button></div>`;
+  return `<div class="detail-head mode-${colorKey(route)}"><span class="badge mode-${colorKey(route)}">${escapeHTML(route.line)}</span><div class="detail-title">${title}<small>${subtitle}</small></div><button type="button" class="icon-close" aria-label="${escapeHTML(t('close'))}">×</button></div>${vehicleArt(route)}`;
 }
 function tripDetailHTML(trip, now) {
   const route = trip.route, pattern = trip.pattern, quays = pattern.quays;

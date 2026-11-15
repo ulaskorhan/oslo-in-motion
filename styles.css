@@ -175,6 +175,22 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 .trip-row:hover { background: var(--accent-soft); }
 .trip-row span:last-child { font: 500 11px 'DM Mono', monospace; color: var(--ink-2); }
 
+/* ── Side-view vehicle pictures ─────────────────── */
+.vehicle-art { padding: 10px 18px 0; }
+.vehicle-art svg { display: block; width: 100%; max-width: 300px; height: auto; margin: 0 auto; overflow: visible; }
+.va-body { fill: var(--c); }
+.va-window { fill: color-mix(in srgb, var(--panel) 75%, #9fc3d6); }
+.va-door { fill: color-mix(in srgb, var(--c) 70%, #000); }
+.va-wheel { fill: var(--ink); }
+.va-hub { fill: var(--panel-2); }
+.va-skirt { fill: color-mix(in srgb, var(--c) 60%, #000); }
+.va-pan { fill: none; stroke: var(--ink-2); stroke-width: 1.6; stroke-linejoin: round; }
+.va-sign { fill: #1b1f1d; }
+.va-sign-text { fill: #ffb347; font: 700 4px 'DM Mono', monospace; text-anchor: middle; }
+.va-cabin { fill: var(--panel); stroke: color-mix(in srgb, var(--c) 40%, transparent); stroke-width: 1; }
+.va-hull-text { fill: #fff; font: 700 9px 'DM Mono', monospace; text-anchor: middle; }
+.va-wave { fill: none; stroke: color-mix(in srgb, var(--tram) 45%, transparent); stroke-width: 2; }
+
 /* ── Line list ───────────────────────────────────── */
 .lines { padding: 6px 16px 10px; flex: 1; }
 .lines-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 4px 8px; }
