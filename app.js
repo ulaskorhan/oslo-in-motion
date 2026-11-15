@@ -90,6 +90,44 @@ const copy = {
     locale: 'nb-NO'
   }
 };
+Object.assign(copy.en, {
+  brandSub: 'Oslo public transport, live', heading: 'Where are you going?',
+  intro: 'Tell us where you are and where you want to go. We’ll show the next direct bus, tram, T-bane or boat — with live times.',
+  where: 'From', destination: 'To', placeHelp: 'Share your location or type a place.', locate: 'Use my location',
+  originSet: 'Now choose where you’re going.', directRides: 'Direct rides', linesBrowse: 'Browse all lines',
+  nearbySection: 'Departures near you', ridesNear: 'Lines stopping near',
+  legendLive: 'Live updates', legendScheduled: 'Scheduled',
+  explainTitle: 'How this map works',
+  explainNow: (n, l) => `Right now <b>${n}</b> buses, trams, trains and boats are on the move across <b>${l}</b> lines.`,
+  explainWhereTitle: 'Where the vehicles come from',
+  explainWhere: 'Ruter doesn’t share GPS positions. Instead, each vehicle is placed where today’s timetable says it should be, moving smoothly along the route between stops.',
+  explainLiveTitle: 'Live updates',
+  explainLive: n => `For <b>${n}</b> of them — every T-bane, tram and boat, plus any line you pick — Entur sends live times. They shift the vehicle when it runs early or late, and get a <span class="ring-sample"></span> green ring.`,
+  explainFreshTitle: 'How fresh it is',
+  explainFresh: (date, time) => `Timetable for ${date}${time ? ` · live times checked at ${time}` : ''}. Departure boards near you are always live.`,
+  explainMissing: 'Today’s timetable hasn’t been published yet, so vehicles aren’t shown. Departure boards near you still work.',
+  explainLoading: 'Loading today’s timetable…',
+  credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a> · Map © Kartverket · Place search: Photon / OpenStreetMap'
+});
+Object.assign(copy.no, {
+  brandSub: 'Kollektivtrafikk i Oslo, live', heading: 'Hvor skal du?',
+  intro: 'Fortell oss hvor du er og hvor du skal. Vi viser neste direkte buss, trikk, T-bane eller båt — med sanntid.',
+  where: 'Fra', destination: 'Til', placeHelp: 'Del posisjonen din eller skriv et sted.', locate: 'Bruk posisjonen min',
+  originSet: 'Velg nå hvor du skal.', directRides: 'Direkte reiser', linesBrowse: 'Se alle linjer',
+  nearbySection: 'Avganger i nærheten', ridesNear: 'Linjer som stopper nær',
+  legendLive: 'Sanntid', legendScheduled: 'Rutetid',
+  explainTitle: 'Slik fungerer kartet',
+  explainNow: (n, l) => `Akkurat nå er <b>${n}</b> busser, trikker, tog og båter i bevegelse på <b>${l}</b> linjer.`,
+  explainWhereTitle: 'Hvor kjøretøyene kommer fra',
+  explainWhere: 'Ruter deler ikke GPS-posisjoner. Hvert kjøretøy plasseres derfor der dagens rutetabell sier det skal være, og beveger seg jevnt langs ruten mellom holdeplassene.',
+  explainLiveTitle: 'Sanntid',
+  explainLive: n => `For <b>${n}</b> av dem — alle T-baner, trikker og båter, pluss linjen du velger — sender Entur sanntid. Da flyttes kjøretøyet når det er tidlig eller sent ute, og får en <span class="ring-sample"></span> grønn ring.`,
+  explainFreshTitle: 'Hvor ferskt det er',
+  explainFresh: (date, time) => `Rutetabell for ${date}${time ? ` · sanntid sjekket ${time}` : ''}. Avgangstavlene i nærheten er alltid i sanntid.`,
+  explainMissing: 'Dagens rutetabell er ikke publisert ennå, så kjøretøy vises ikke. Avgangstavlene i nærheten virker fortsatt.',
+  explainLoading: 'Henter dagens rutetabell …',
+  credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a> · Kart © Kartverket · Stedsøk: Photon / OpenStreetMap'
+});
 let language = 'en';
 try { language = localStorage.getItem('oslo-in-motion-language') === 'no' ? 'no' : 'en'; } catch { /* storage blocked */ }
 const t = key => copy[language][key] ?? copy.en[key] ?? key;
@@ -853,25 +891,30 @@ function lineDetailHTML(routeId, now) {
 }
 
 /* ── Stats, status, legend ───────────────────────────────────────────────── */
-function updateStats() {
+function updateStats() { renderExplainer(); }
+function updateStatus() { renderExplainer(); }
+function renderExplainer() {
+  const box = $('explainer');
   const visible = activeTrips.filter(trip => selectedModes.has(trip.route.mode));
   const live = visible.filter(trip => trip.rt?.live).length;
   const lines = new Set(visible.map(trip => trip.routeId)).size;
-  const ready = timetable.status === 'ready';
-  $('stat-row').innerHTML = [[ready ? visible.length : '—', t('statVehicles')], [ready ? live : '—', t('statLive')], [ready ? lines : '—', t('statLines')]]
-    .map(([value, label]) => `<div class="stat"><b>${value}</b><span>${escapeHTML(label)}</span></div>`).join('');
-  document.querySelectorAll('.mode-chip').forEach(chip => { chip.querySelector('.mode-count').textContent = ready ? activeByMode[chip.dataset.mode] : ''; });
-}
-function updateStatus() {
-  const dot = $('status-dot'), label = $('status-text'), pill = $('status-pill');
-  dot.className = 'status-dot';
-  if (timetable.status === 'loading') { label.textContent = t('loading'); return; }
-  if (timetable.status !== 'ready') { dot.classList.add('warn'); label.textContent = t(timetable.status === 'missing' ? 'statusMissing' : 'statusError'); return; }
+  let now;
+  if (timetable.status === 'loading') now = escapeHTML(t('explainLoading'));
+  else if (timetable.status !== 'ready') now = escapeHTML(t('explainMissing'));
+  else now = t('explainNow')(visible.length, lines);
   const fresh = Date.now() - lastRealtimeOk < 120000;
-  if (fresh) dot.classList.add('live');
-  label.textContent = fresh ? t('statusLive') : t('statusTimetable');
-  const generated = timetable.generated ? new Date(timetable.generated) : null;
-  pill.title = `${timetable.dates.join(', ')}${generated ? ` · ${t('updated')} ${generated.toLocaleString(t('locale'), { timeZone: 'Europe/Oslo' })}` : ''}${lastRealtimeOk ? ` · realtime ${clockTime(lastRealtimeOk, true)}` : ''}`;
+  const latest = timetable.dates[timetable.dates.length - 1];
+  const date = latest ? new Intl.DateTimeFormat(t('locale'), { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${latest}T12:00:00Z`)) : '—';
+  const dot = fresh ? ' live' : timetable.status === 'ready' || timetable.status === 'loading' ? '' : ' warn';
+  const html = `<h2 class="section-title">${escapeHTML(t('explainTitle'))}</h2>
+    <p class="explainer-now"><span class="status-dot${dot}"></span><span>${now}</span></p>
+    <div class="explainer-grid">
+      <div><h3>${escapeHTML(t('explainWhereTitle'))}</h3><p>${escapeHTML(t('explainWhere'))}</p></div>
+      <div><h3>${escapeHTML(t('explainLiveTitle'))}</h3><p>${t('explainLive')(live)}</p></div>
+      <div><h3>${escapeHTML(t('explainFreshTitle'))}</h3><p>${escapeHTML(t('explainFresh')(date, lastRealtimeOk ? clockTime(lastRealtimeOk) : ''))}</p></div>
+    </div>
+    <p class="credits">${t('credits')}</p>`;
+  if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
 }
 function renderLegend() {
   const items = [['metro', t('metro')], ['tram', t('tram')], ['bus', t('cityBus')], ['regional', t('regional')], ['boat', t('boat')]]
@@ -951,6 +994,11 @@ const destinationInput = $('destination-search'), destinationStatus = $('destina
 const destinationResults = $('destination-results'), destinationRoutes = $('destination-routes'), destinationClear = $('destination-clear');
 let destination = null, destinationMarker = null, destinationTimer = null, destinationController = null;
 let origin = null; // { point, label }
+function setRides(html, title = '') {
+  destinationRoutes.innerHTML = html;
+  $('rides-section').hidden = !html;
+  if (title) $('rides-title').textContent = title;
+}
 const WALK_RADIUS = 500, WALK_SPEED = 1.3; // metres, m/s
 
 function quaysNear(point, radius = WALK_RADIUS) {
@@ -1028,21 +1076,24 @@ function showDestination(point, label, moveMap = true) {
   if (!destinationMarker) destinationMarker = L.marker(point, { icon: L.divIcon({ className: '', html: '<div class="dest-dot"></div>', iconSize: [20, 20], iconAnchor: [10, 20] }), zIndexOffset: 1800 }).addTo(map);
   destinationMarker.setLatLng(point).bindTooltip(escapeHTML(label), { direction: 'top', offset: [0, -18] });
   if (moveMap) map.flyTo(point, 15, { duration: 0.6 });
-  if (timetable.status !== 'ready') { destinationStatus.textContent = t('loading'); destinationRoutes.replaceChildren(); return; }
+  if (timetable.status !== 'ready') { destinationStatus.textContent = t('loading'); setRides(''); return; }
   const now = Date.now();
   let html = '';
+  let rideTitle = '';
   let rides = origin ? directRides(origin.point, point, now) : [];
   if (rides.length) {
-    destinationStatus.textContent = `${t('directRides')}`;
+    destinationStatus.textContent = '';
+    rideTitle = t('directRides');
     html = rides.map(ride => rideRow(ride, true, now)).join('');
   } else {
     rides = linesNear(point, now);
-    destinationStatus.textContent = rides.length ? `${t('linesNear')} ${label}` : t('destinationNone');
+    destinationStatus.textContent = rides.length ? '' : t('destinationNone');
+    rideTitle = `${t('ridesNear')} ${label}`;
     html = (origin && rides.length ? `<div class="caveat">${escapeHTML(t('noDirect'))}</div>` : '') + rides.map(ride => rideRow(ride, false, now)).join('');
     if (!origin && rides.length) html += `<div class="caveat">${escapeHTML(t('setOrigin'))}</div>`;
   }
   if (rides.length) html += `<div class="caveat">${escapeHTML(t('destinationCaveat'))}</div>`;
-  destinationRoutes.innerHTML = html;
+  setRides(rides.length ? html : '', rideTitle);
 }
 destinationRoutes.addEventListener('click', event => {
   const button = event.target.closest('[data-trip]');
@@ -1061,7 +1112,7 @@ destinationInput.addEventListener('input', () => {
   clearTimeout(destinationTimer);
   destinationController?.abort();
   const query = destinationInput.value.trim();
-  destinationResults.replaceChildren(); destinationRoutes.replaceChildren(); destinationClear.hidden = !query;
+  destinationResults.replaceChildren(); setRides(''); destinationClear.hidden = !query;
   if (query.length < 2) { destinationStatus.textContent = t('destinationHelp'); return; }
   const stops = timetable.status === 'ready' ? stopSearch(query) : [];
   if (stops.length) { addHeading(destinationResults, t('stops')); stops.forEach(stop => addOption(destinationResults, stop, item => showDestination(item.point, item.label))); }
@@ -1079,7 +1130,7 @@ destinationInput.addEventListener('input', () => {
 destinationInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); destinationResults.querySelector('.result')?.click(); } });
 destinationClear.addEventListener('click', () => {
   destination = null; destinationInput.value = ''; destinationClear.hidden = true;
-  destinationResults.replaceChildren(); destinationRoutes.replaceChildren(); destinationStatus.textContent = t('destinationHelp');
+  destinationResults.replaceChildren(); setRides(''); destinationStatus.textContent = t('destinationHelp');
   destinationMarker?.remove(); destinationMarker = null; destinationInput.focus();
 });
 setInterval(() => { if (destination && timetable.status === 'ready' && !destinationResults.childElementCount) showDestination(destination.point, destination.label, false); }, 30000);
@@ -1096,7 +1147,7 @@ function setOrigin(lat, lng, label) {
   if (!userMarker) userMarker = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: '<div class="user-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), zIndexOffset: 2000 }).addTo(map);
   userMarker.setLatLng([lat, lng]).bindTooltip(escapeHTML(label), { direction: 'top', offset: [0, -10] });
   map.flyTo([lat, lng], 15, { duration: 0.7 });
-  placeStatus.textContent = label;
+  placeStatus.textContent = destination ? label : `${label} · ${t('originSet')}`;
   loadNearbyStops(lat, lng);
   if (destination) showDestination(destination.point, destination.label, false);
 }
@@ -1134,8 +1185,9 @@ async function loadNearbyStops(lat, lng) {
   nearbyController?.abort(); departuresController?.abort(); clearTimeout(departuresTimer);
   const controller = new AbortController(); nearbyController = controller;
   nearbyStops = []; selectedStop = null; departuresCache = null; nearbyStopLayer.clearLayers();
+  $('nearby-section').hidden = false;
   nearbyPrivacy.hidden = false; nearbyPrivacy.textContent = t('nearbyPrivacy');
-  nearbyBox.innerHTML = `<div class="nearby-heading">${escapeHTML(t('nearbyTitle'))}</div><div class="hint">${escapeHTML(t('nearbySearching'))}</div>`;
+  nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbySearching'))}</div>`;
   try {
     const url = new URL('https://api.entur.io/geocoder/v1/reverse');
     url.searchParams.set('point.lat', String(lat)); url.searchParams.set('point.lon', String(lng));
@@ -1151,17 +1203,17 @@ async function loadNearbyStops(lat, lng) {
       if (!unique.has(id)) unique.set(id, stop);
     }
     nearbyStops = [...unique.values()].sort((a, b) => a.distance - b.distance).slice(0, 6);
-    if (!nearbyStops.length) { nearbyBox.innerHTML = `<div class="nearby-heading">${escapeHTML(t('nearbyTitle'))}</div><div class="hint">${escapeHTML(t('nearbyNone'))}</div>`; return; }
+    if (!nearbyStops.length) { nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbyNone'))}</div>`; return; }
     renderNearbyStops();
     loadDepartures(nearbyStops[0]);
   } catch (error) {
-    if (error.name !== 'AbortError') nearbyBox.innerHTML = `<div class="nearby-heading">${escapeHTML(t('nearbyTitle'))}</div><div class="hint">${escapeHTML(t('nearbyError'))}</div>`;
+    if (error.name !== 'AbortError') nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbyError'))}</div>`;
   }
 }
 function renderNearbyStops() {
   nearbyStopLayer.clearLayers();
   const chips = nearbyStops.map((stop, index) => `<button type="button" class="stop-chip${selectedStop === stop.id ? ' active' : ''}" data-stop="${index}">${escapeHTML(stop.name)} <small>${distanceLabel(stop.distance)}</small></button>`).join('');
-  nearbyBox.innerHTML = `<div class="nearby-heading">${escapeHTML(t('nearbyTitle'))}</div><div class="nearby-stop-list">${chips}</div><div id="board"></div>`;
+  nearbyBox.innerHTML = `<div class="nearby-stop-list">${chips}</div><div id="board"></div>`;
   nearbyBox.querySelectorAll('[data-stop]').forEach(button => button.addEventListener('click', () => loadDepartures(nearbyStops[Number(button.dataset.stop)])));
   for (const stop of nearbyStops) {
     L.circleMarker([stop.lat, stop.lng], { radius: 6, color: palette.ink, weight: 2, fillColor: palette.panel, fillOpacity: 1 })
@@ -1222,14 +1274,14 @@ function applyLanguage(next) {
   document.documentElement.lang = language === 'no' ? 'nb' : 'en';
   document.title = t('title');
   const set = (id, key) => { $(id).textContent = t(key); };
-  set('brand-sub', 'brandSub'); set('eyebrow', 'eyebrow'); $('main-heading').innerHTML = t('heading');
+  set('brand-sub', 'brandSub'); set('main-heading', 'heading'); set('intro-copy', 'intro');
   set('destination-title', 'destination'); destinationInput.placeholder = t('destinationPlaceholder');
   if (!destination) destinationStatus.textContent = t('destinationHelp');
-  set('where-title', 'where'); placeInput.placeholder = t('placePlaceholder'); set('locate-me', 'locate');
+  set('where-title', 'where'); placeInput.placeholder = t('placePlaceholder'); set('locate-label', 'locate');
   if (!origin) placeStatus.textContent = t('placeHelp');
   if (!nearbyPrivacy.hidden) nearbyPrivacy.textContent = t('nearbyPrivacy');
-  set('section-title', 'lines'); $('search').placeholder = t('filter');
-  $('data-note').innerHTML = t('note');
+  set('section-title', 'linesBrowse'); $('search').placeholder = t('filter');
+  set('nearby-title', 'nearbySection'); if (!destination) set('rides-title', 'directRides');
   document.querySelectorAll('.mode-chip').forEach(chip => { chip.querySelector('.mode-name').textContent = t(chip.dataset.mode); });
   $('lang-en').classList.toggle('active', language === 'en'); $('lang-no').classList.toggle('active', language === 'no');
   $('lang-en').setAttribute('aria-pressed', String(language === 'en')); $('lang-no').setAttribute('aria-pressed', String(language === 'no'));

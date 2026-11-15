@@ -11,17 +11,31 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <div id="app">
     <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17c3-6 5-9 8-9s5 3 8 9"/><circle cx="12" cy="8" r="2.2" fill="currentColor" stroke="none"/></svg></div>
-        <div><div class="brand-name">Oslo in Motion</div><div class="brand-sub" id="brand-sub">Ruter network, in motion</div></div>
-      </div>
+      <a class="brand" href="./" aria-label="Oslo in Motion">
+        <svg class="logo" viewBox="0 0 140 52" aria-hidden="true">
+          <g class="logo-speed"><path d="M0 12h12M3 19h10M0 26h12"/></g>
+          <g class="logo-bus">
+            <path class="logo-body" d="M20 4h90c9 0 15 5 17.5 12l1.5 5v3.5c0 1.4-1.1 2.5-2.5 2.5H20c-2.2 0-4-1.8-4-4V8c0-2.2 1.8-4 4-4Z"/>
+            <path class="logo-glass" d="M112 8h2.5c3.6 0 6.6 2.4 7.6 5.8l1 3.7H112Z"/>
+            <rect class="logo-glass" x="24" y="8" width="16" height="8.5" rx="2"/><rect class="logo-glass" x="44" y="8" width="16" height="8.5" rx="2"/>
+            <rect class="logo-glass" x="64" y="8" width="16" height="8.5" rx="2"/><rect class="logo-glass" x="84" y="8" width="16" height="8.5" rx="2"/>
+            <rect class="logo-door" x="103" y="8" width="7" height="18" rx="1.5"/>
+            <circle class="logo-arch" cx="32" cy="37" r="14.5"/><circle class="logo-arch" cx="110" cy="37" r="14.5"/>
+          </g>
+          <g class="logo-word">
+            <text class="logo-wheel-letter" x="32" y="48">O</text>
+            <text x="60" y="48">S</text><text x="82" y="48">L</text>
+            <text class="logo-wheel-letter" x="110" y="48">O</text>
+          </g>
+        </svg>
+        <span class="brand-text"><span class="brand-name">in Motion</span><span class="brand-sub" id="brand-sub">Oslo public transport, live</span></span>
+      </a>
       <div class="head-right">
-        <div class="status-pill" id="status-pill" title=""><span class="status-dot" id="status-dot"></span><span id="status-text">Loading timetable…</span></div>
         <div class="language-toggle" role="group" aria-label="Choose language"><button id="lang-en" type="button">EN</button><button id="lang-no" type="button">NO</button></div>
         <div class="clock" id="clock" aria-label="Oslo time">--:--:--</div>
       </div>
@@ -29,62 +43,69 @@
     <main>
       <aside class="sidebar" id="sidebar">
         <section class="intro">
-          <div class="eyebrow" id="eyebrow">Oslo, right now</div>
-          <h1 id="main-heading">Every scheduled ride,<br>where it should be.</h1>
-          <div class="stat-row" id="stat-row" aria-live="polite"></div>
+          <h1 id="main-heading">Where are you going?</h1>
+          <p id="intro-copy">Tell us where you are and where you want to go. We’ll show the next direct bus, tram, T-bane or boat — with live times.</p>
+        </section>
+
+        <section class="card journey">
+          <div class="journey-row">
+            <span class="journey-mark from" aria-hidden="true"></span>
+            <div class="journey-field">
+              <label class="field-label" id="where-title" for="place-search">From</label>
+              <div class="field">
+                <input id="place-search" type="search" placeholder="Enter a place in Oslo" autocomplete="off" />
+              </div>
+              <button id="locate-me" class="button-primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2Z" stroke-linejoin="round"/></svg><span id="locate-label">Use my location</span></button>
+              <div class="hint" id="place-status" aria-live="polite">Share your location or type a place.</div>
+              <div class="results" id="place-results" role="listbox" aria-label="Place suggestions"></div>
+            </div>
+          </div>
+          <div class="journey-row">
+            <span class="journey-mark to" aria-hidden="true"></span>
+            <div class="journey-field">
+              <label class="field-label" id="destination-title" for="destination-search">To</label>
+              <div class="field">
+                <input id="destination-search" type="search" placeholder="Search a stop or place" autocomplete="off" />
+                <button id="destination-clear" class="field-clear" type="button" hidden aria-label="Clear destination">×</button>
+              </div>
+              <div class="hint" id="destination-status" aria-live="polite">Try Jernbanetorget, Majorstuen or Aker brygge.</div>
+              <div class="results" id="destination-results" role="listbox" aria-label="Destination suggestions"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-section" id="rides-section" hidden>
+          <h2 class="section-title" id="rides-title">Your options</h2>
+          <div class="destination-routes" id="destination-routes" aria-live="polite"></div>
         </section>
 
         <section id="detail" class="detail-card" hidden aria-live="polite"></section>
 
-        <section class="card trip-card">
-          <label class="field-label" id="destination-title" for="destination-search">Where are you going?</label>
-          <div class="field">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10" r="2.3"/></svg>
-            <input id="destination-search" type="search" placeholder="Search a stop or place" autocomplete="off" />
-            <button id="destination-clear" class="field-clear" type="button" hidden aria-label="Clear destination">×</button>
-          </div>
-          <div class="hint" id="destination-status" aria-live="polite">Try Jernbanetorget, Majorstuen or Aker brygge.</div>
-          <div class="results" id="destination-results" role="listbox" aria-label="Destination suggestions"></div>
-          <div class="destination-routes" id="destination-routes" aria-live="polite"></div>
-
-          <div class="divider"></div>
-
-          <label class="field-label" id="where-title" for="place-search">Where are you?</label>
-          <div class="field-row">
-            <div class="field">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4" stroke-linecap="round"/></svg>
-              <input id="place-search" type="search" placeholder="Enter a place in Oslo" autocomplete="off" />
-            </div>
-            <button id="locate-me" class="button-secondary" type="button">Use my location</button>
-          </div>
-          <div class="hint" id="place-status" aria-live="polite">Choose a place or share your location.</div>
-          <div class="results" id="place-results" role="listbox" aria-label="Place suggestions"></div>
+        <section class="panel-section" id="nearby-section" hidden>
+          <h2 class="section-title" id="nearby-title">Departures near you</h2>
           <div id="nearby-stops" class="nearby" aria-live="polite"></div>
           <div class="hint fine" id="nearby-privacy" hidden></div>
         </section>
 
-        <section class="lines">
-          <div class="lines-head">
-            <h2 class="section-title" id="section-title">Lines</h2>
-            <div class="count" id="count">—</div>
-          </div>
+        <details class="lines" id="lines-panel">
+          <summary><span class="section-title" id="section-title">Browse all lines</span><span class="count" id="count">—</span></summary>
           <div class="field compact">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4" stroke-linecap="round"/></svg>
             <input id="search" type="search" placeholder="Filter by line or destination" autocomplete="off" />
           </div>
           <div class="line-list" id="line-list"></div>
-        </section>
+        </details>
 
-        <footer class="side-note" id="data-note"></footer>
+        <section class="explainer" id="explainer" aria-live="polite"></section>
       </aside>
 
       <section class="map-wrap">
         <div id="map"></div>
         <div class="mode-bar" role="group" id="mode-group" aria-label="Choose transport types">
-          <button type="button" class="mode-chip" data-mode="metro" aria-pressed="true"><i></i><span class="mode-name">T-bane</span><b class="mode-count"></b></button>
-          <button type="button" class="mode-chip" data-mode="tram" aria-pressed="true"><i></i><span class="mode-name">Trikk</span><b class="mode-count"></b></button>
-          <button type="button" class="mode-chip" data-mode="bus" aria-pressed="true"><i></i><span class="mode-name">Bus</span><b class="mode-count"></b></button>
-          <button type="button" class="mode-chip" data-mode="boat" aria-pressed="true"><i></i><span class="mode-name">Boat</span><b class="mode-count"></b></button>
+          <button type="button" class="mode-chip" data-mode="metro" aria-pressed="true"><i></i><span class="mode-name">T-bane</span></button>
+          <button type="button" class="mode-chip" data-mode="tram" aria-pressed="true"><i></i><span class="mode-name">Trikk</span></button>
+          <button type="button" class="mode-chip" data-mode="bus" aria-pressed="true"><i></i><span class="mode-name">Bus</span></button>
+          <button type="button" class="mode-chip" data-mode="boat" aria-pressed="true"><i></i><span class="mode-name">Boat</span></button>
         </div>
         <div class="map-actions">
           <button class="icon-btn" id="locate" type="button" title="Share my location" aria-label="Share my location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg></button>
@@ -113,6 +134,6 @@
   <script src="ruter-routes-06.js?v=2"></script>
   <script src="ruter-routes-07.js?v=2"></script>
   <script src="ruter-routes-08.js?v=2"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
