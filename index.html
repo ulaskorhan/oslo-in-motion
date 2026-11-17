@@ -11,26 +11,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <div id="app">
     <header class="topbar">
       <a class="brand" href="./" aria-label="Oslo in Motion">
-        <svg class="logo" viewBox="0 0 140 52" aria-hidden="true">
-          <g class="logo-speed"><path d="M0 12h12M3 19h10M0 26h12"/></g>
-          <g class="logo-bus">
-            <path class="logo-body" d="M20 4h90c9 0 15 5 17.5 12l1.5 5v3.5c0 1.4-1.1 2.5-2.5 2.5H20c-2.2 0-4-1.8-4-4V8c0-2.2 1.8-4 4-4Z"/>
-            <path class="logo-glass" d="M112 8h2.5c3.6 0 6.6 2.4 7.6 5.8l1 3.7H112Z"/>
-            <rect class="logo-glass" x="24" y="8" width="16" height="8.5" rx="2"/><rect class="logo-glass" x="44" y="8" width="16" height="8.5" rx="2"/>
-            <rect class="logo-glass" x="64" y="8" width="16" height="8.5" rx="2"/><rect class="logo-glass" x="84" y="8" width="16" height="8.5" rx="2"/>
-            <rect class="logo-door" x="103" y="8" width="7" height="18" rx="1.5"/>
-            <circle class="logo-arch" cx="32" cy="37" r="14.5"/><circle class="logo-arch" cx="110" cy="37" r="14.5"/>
-          </g>
+        <svg class="logo" viewBox="8 0 286 124" aria-hidden="true">
+          <path class="logo-wire" d="M14 7 H290"/>
+          <path class="logo-spark" d="M14 7 H290"/>
+          <path class="logo-panto" d="M176 24 L191 15.5 L176 7"/>
           <g class="logo-word">
-            <text class="logo-wheel-letter" x="32" y="48">O</text>
-            <text x="60" y="48">S</text><text x="82" y="48">L</text>
-            <text class="logo-wheel-letter" x="110" y="48">O</text>
+            <g class="logo-wheel" style="transform-origin:62px 92px"><circle cx="62" cy="92" r="24"/><path d="M62 68v9"/></g>
+            <circle class="logo-hub" cx="62" cy="92" r="4.5"/>
+            <path d="M146 36 C138 20 104 18 102 42 C100 64 146 66 144 92 C142 116 108 118 98 102"/>
+            <path d="M176 24 V114 H210"/>
+            <g class="logo-wheel" style="transform-origin:242px 92px"><circle cx="242" cy="92" r="24"/><path d="M242 68v9"/></g>
+            <circle class="logo-hub" cx="242" cy="92" r="4.5"/>
           </g>
         </svg>
         <span class="brand-text"><span class="brand-name">in Motion</span><span class="brand-sub" id="brand-sub">Oslo public transport, live</span></span>

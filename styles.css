@@ -277,17 +277,23 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 
 /* ── Logo: a bus whose wheels are the O's of OSLO ─ */
 .brand { text-decoration: none; color: inherit; gap: 8px; }
-.logo { height: 44px; width: auto; overflow: visible; flex: none; }
-.logo-body { fill: var(--bus); }
-.logo-arch { fill: var(--panel); }
-.logo-glass { fill: color-mix(in srgb, var(--panel) 78%, #9cc9de); }
-.logo-door { fill: color-mix(in srgb, var(--bus) 72%, #000); }
-.logo-word text { fill: var(--ink); font: 800 30px Manrope, sans-serif; text-anchor: middle; }
-.logo-speed path { stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 8 6; animation: speed 0.9s linear infinite; }
-.logo-bus { animation: ride 1.2s ease-in-out infinite alternate; }
-@keyframes speed { to { stroke-dashoffset: 14; } }
-@keyframes ride { to { transform: translateY(-0.9px); } }
-@media (prefers-reduced-motion: reduce) { .logo-speed path, .logo-bus { animation: none; } }
+.logo { height: 40px; width: auto; overflow: visible; flex: none; }
+.logo-word path, .logo-word circle { fill: none; stroke: var(--ink); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.logo-word .logo-hub { fill: var(--ink); stroke: none; }
+.logo-panto { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.logo-wire { stroke: var(--bus); stroke-width: 4; stroke-linecap: round; }
+.logo-spark { stroke: #fff6c2; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 0 276 10 0; opacity: 0; }
+.logo-wheel { animation: roll 2.4s linear infinite; }
+.brand:hover .logo-spark { animation: spark .9s ease-out; }
+@keyframes roll { to { transform: rotate(360deg); } }
+@keyframes spark { 0% { opacity: 1; stroke-dasharray: 0 162 10 200; } 100% { opacity: 0; stroke-dasharray: 0 162 40 200; } }
+@media (prefers-reduced-motion: reduce) { .logo-wheel, .logo-spark { animation: none; } }
+/* Simple raised-map look: lines and vehicles cast a soft shadow, edges darken slightly. */
+.leaflet-routes-bus-pane, .leaflet-routes-boat-pane, .leaflet-routes-tram-pane, .leaflet-routes-metro-pane, .leaflet-routes-selected-pane { filter: drop-shadow(0 2px 1.5px var(--lift)); }
+.leaflet-vehicles-pane { filter: drop-shadow(1px 4px 3px var(--lift-strong)); }
+.map-wrap::after { content: ""; position: absolute; inset: 0; z-index: 450; pointer-events: none; box-shadow: inset 0 0 70px var(--vignette); }
+:root { --lift: rgba(20, 30, 25, .28); --lift-strong: rgba(20, 30, 25, .35); --vignette: rgba(30, 40, 35, .16); }
+@media (prefers-color-scheme: dark) { :root { --lift: rgba(0, 0, 0, .6); --lift-strong: rgba(0, 0, 0, .7); --vignette: rgba(0, 0, 0, .45); } }
 .brand-text { display: flex; flex-direction: column; justify-content: center; }
 .brand-name { font: 800 19px/1 Manrope, sans-serif; letter-spacing: -.03em; }
 .brand-sub { margin-top: 3px; }
@@ -334,7 +340,7 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 
 @media (max-width: 860px) {
   main { grid-template-rows: minmax(250px, 42%) 1fr; }
-  .logo { height: 34px; }
+  .logo { height: 32px; }
   .brand-name { font-size: 16px; }
   .intro h1 { font-size: 21px; }
   .intro p { font-size: 12.5px; }
