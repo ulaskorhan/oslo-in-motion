@@ -156,6 +156,40 @@ Object.assign(copy.no, {
   explainLoading: 'Henter dagens rutetabell …',
   credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a> · Kart © Kartverket · Stedsøk: Entur'
 });
+Object.assign(copy.en, {
+  explainTitle: 'How this map works',
+  whyTitle: 'Why this map exists',
+  why: 'Most travel apps tell you <i>when</i> to go. This map also shows you <i>where</i>: every bus, tram, T-bane and boat in Oslo moving at once, and exactly where your own ride is right now — so you know whether to walk, hurry, or finish your coffee.',
+  helpsTitle: 'What it does for you',
+  helpPlan: '<b>Plans the whole trip.</b> Type where you’re going and Entur’s journey planner — the same one Ruter uses — finds the best way, with changes and walking, anywhere in Norway.',
+  helpTrack: '<b>Shows where your ride is.</b> The best option opens with a live line like “Bus 31 is at Solli, 3 stops away”, and the map zooms to you, your stop and the moving vehicle.',
+  helpNear: '<b>Finds your five closest stops.</b> Share your location and they’re numbered on the map inside a circle reaching the fifth one, each with live departures.',
+  helpBrowse: '<b>Lets you explore.</b> Click any vehicle or line to see its stops and times, filter by T-bane, trikk, bus or boat, and switch between light and dark, English and Norwegian.',
+  vehiclesTitle: 'How the vehicles get on the map',
+  vehicles: n => `Ruter doesn’t publish GPS positions. Each vehicle is placed where today’s timetable says it should be and moves smoothly along its route between stops. Every T-bane, tram and boat — plus any line or trip you pick — is corrected with Entur’s live times when it runs early or late. Those vehicles get a <span class="ring-sample"></span> green ring${n ? ` (${n} right now)` : ''}.`,
+  freshTitle: 'How fresh it is',
+  fresh: (date, time) => `The timetable is rebuilt every night (now: ${date}). Live times were last checked ${time || '—'}. Trip plans, “where is my ride” and departure boards are always live.`,
+  privacyTitle: 'Your privacy',
+  privacy: 'No account and no cookies. Your location is only used when you ask for it, and is sent to Entur just to find stops and plan trips. Your language and theme choice stay in your own browser.',
+  footNow: (n, l) => `Right now ${n} buses, trams, trains and boats are on the move across ${l} lines.`
+});
+Object.assign(copy.no, {
+  explainTitle: 'Slik fungerer kartet',
+  whyTitle: 'Hvorfor kartet finnes',
+  why: 'De fleste reiseapper forteller deg <i>når</i> du skal gå. Dette kartet viser deg også <i>hvor</i>: alle busser, trikker, T-baner og båter i Oslo i bevegelse samtidig, og nøyaktig hvor din egen avgang er akkurat nå — så du vet om du kan gå rolig, må skynde deg eller rekker å drikke opp kaffen.',
+  helpsTitle: 'Hva det gjør for deg',
+  helpPlan: '<b>Planlegger hele reisen.</b> Skriv hvor du skal, så finner Enturs reiseplanlegger — den samme som Ruter bruker — beste vei, med bytter og gange, hvor som helst i Norge.',
+  helpTrack: '<b>Viser hvor avgangen din er.</b> Beste forslag åpnes med en sanntidslinje som «Buss 31 er ved Solli, 3 stopp unna», og kartet zoomer inn på deg, holdeplassen og kjøretøyet.',
+  helpNear: '<b>Finner dine fem nærmeste holdeplasser.</b> Del posisjonen din, så nummereres de på kartet innenfor en sirkel ut til den femte, hver med avganger i sanntid.',
+  helpBrowse: '<b>Lar deg utforske.</b> Klikk på et kjøretøy eller en linje for å se stopp og tider, filtrer på T-bane, trikk, buss eller båt, og bytt mellom lyst og mørkt, norsk og engelsk.',
+  vehiclesTitle: 'Hvordan kjøretøyene havner på kartet',
+  vehicles: n => `Ruter publiserer ikke GPS-posisjoner. Hvert kjøretøy plasseres der dagens rutetabell sier det skal være, og beveger seg jevnt langs ruten mellom holdeplassene. Alle T-baner, trikker og båter — pluss linjen eller turen du velger — justeres med sanntid fra Entur når de er tidlig eller sent ute. De får en <span class="ring-sample"></span> grønn ring${n ? ` (${n} akkurat nå)` : ''}.`,
+  freshTitle: 'Hvor ferskt det er',
+  fresh: (date, time) => `Rutetabellen bygges på nytt hver natt (nå: ${date}). Sanntid sist sjekket ${time || '—'}. Reiseforslag, «hvor er avgangen min» og avgangstavler er alltid i sanntid.`,
+  privacyTitle: 'Personvern',
+  privacy: 'Ingen konto og ingen informasjonskapsler. Posisjonen din brukes bare når du ber om det, og sendes til Entur kun for å finne holdeplasser og planlegge reiser. Valg av språk og tema lagres bare i nettleseren din.',
+  footNow: (n, l) => `Akkurat nå er ${n} busser, trikker, tog og båter i bevegelse på ${l} linjer.`
+});
 let language = 'en';
 try { language = localStorage.getItem('oslo-in-motion-language') === 'no' ? 'no' : 'en'; } catch { /* storage blocked */ }
 const t = key => copy[language][key] ?? copy.en[key] ?? key;
@@ -922,27 +956,33 @@ function lineDetailHTML(routeId, now) {
 function updateStats() { renderExplainer(); }
 function updateStatus() { renderExplainer(); }
 function renderExplainer() {
-  const box = $('explainer');
   const visible = activeTrips.filter(trip => selectedModes.has(trip.route.mode));
   const live = visible.filter(trip => trip.rt?.live).length;
   const lines = new Set(visible.map(trip => trip.routeId)).size;
-  let now;
-  if (timetable.status === 'loading') now = escapeHTML(t('explainLoading'));
-  else if (timetable.status !== 'ready') now = escapeHTML(t('explainMissing'));
-  else now = t('explainNow')(visible.length, lines);
-  const fresh = Date.now() - lastRealtimeOk < 120000;
   const latest = timetable.dates[timetable.dates.length - 1];
   const date = latest ? new Intl.DateTimeFormat(t('locale'), { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${latest}T12:00:00Z`)) : '—';
-  const dot = fresh ? ' live' : timetable.status === 'ready' || timetable.status === 'loading' ? '' : ' warn';
+  const section = (title, body) => `<div><h3>${escapeHTML(t(title))}</h3>${body}</div>`;
   const html = `<h2 class="section-title">${escapeHTML(t('explainTitle'))}</h2>
-    <p class="explainer-now"><span class="status-dot${dot}"></span><span>${now}</span></p>
     <div class="explainer-grid">
-      <div><h3>${escapeHTML(t('explainWhereTitle'))}</h3><p>${escapeHTML(t('explainWhere'))}</p></div>
-      <div><h3>${escapeHTML(t('explainLiveTitle'))}</h3><p>${t('explainLive')(live)}</p></div>
-      <div><h3>${escapeHTML(t('explainFreshTitle'))}</h3><p>${escapeHTML(t('explainFresh')(date, lastRealtimeOk ? clockTime(lastRealtimeOk) : ''))}</p></div>
-    </div>
-    <p class="credits">${t('credits')}</p>`;
+      ${section('whyTitle', `<p>${t('why')}</p>`)}
+      ${section('helpsTitle', `<ul class="helps">${['helpPlan', 'helpTrack', 'helpNear', 'helpBrowse'].map(key => `<li>${t(key)}</li>`).join('')}</ul>`)}
+      ${section('vehiclesTitle', `<p>${t('vehicles')(live)}</p>`)}
+      ${section('freshTitle', `<p>${escapeHTML(t('fresh')(date, lastRealtimeOk ? clockTime(lastRealtimeOk) : ''))}</p>`)}
+      ${section('privacyTitle', `<p>${escapeHTML(t('privacy'))}</p>`)}
+    </div>`;
+  const box = $('explainer');
   if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
+
+  // The live count is a footnote, not an explanation: it sits in the small footer at the very bottom.
+  let now;
+  if (timetable.status === 'loading') now = t('explainLoading');
+  else if (timetable.status !== 'ready') now = t('explainMissing');
+  else now = t('footNow')(visible.length, lines);
+  const fresh = Date.now() - lastRealtimeOk < 120000;
+  const dot = fresh ? ' live' : timetable.status === 'ready' || timetable.status === 'loading' ? '' : ' warn';
+  const foot = `<p class="foot-now"><span class="status-dot${dot}"></span><span>${escapeHTML(now)}</span></p><p class="credits">${t('credits')}</p>`;
+  const footer = $('site-foot');
+  if (footer.dataset.html !== foot) { footer.innerHTML = foot; footer.dataset.html = foot; }
 }
 function renderLegend() {
   const items = [['metro', t('metro')], ['tram', t('tram')], ['bus', t('cityBus')], ['regional', t('regional')], ['boat', t('boat')]]
