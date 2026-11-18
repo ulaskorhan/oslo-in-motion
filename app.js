@@ -171,6 +171,9 @@ Object.assign(copy.en, {
   fresh: (date, time) => `The timetable is rebuilt every night (now: ${date}). Live times were last checked ${time || '—'}. Trip plans, “where is my ride” and departure boards are always live.`,
   privacyTitle: 'Your privacy',
   privacy: 'No account and no cookies. Your location is only used when you ask for it, and is sent to Entur just to find stops and plan trips. Your language and theme choice stay in your own browser.',
+  allDepartures: 'All departures',
+  nearTitle: 'Your five closest stops',
+  near: 'Tap <b>Use my location</b> (or type where you are). We find the five stops closest to you — bus, tram, T-bane, boat or train — and number them 1 to 5 on the map, nearest first. A dashed circle is drawn around you with radius <b>r</b>: the distance to the fifth stop. Everything inside it is within that walk, and the map zooms so the whole circle fits. Tap a number to see the stop’s name, what stops there and its next departures; the full live board is listed below.',
   footNow: (n, l) => `Right now ${n} buses, trams, trains and boats are on the move across ${l} lines.`
 });
 Object.assign(copy.no, {
@@ -188,6 +191,9 @@ Object.assign(copy.no, {
   fresh: (date, time) => `Rutetabellen bygges på nytt hver natt (nå: ${date}). Sanntid sist sjekket ${time || '—'}. Reiseforslag, «hvor er avgangen min» og avgangstavler er alltid i sanntid.`,
   privacyTitle: 'Personvern',
   privacy: 'Ingen konto og ingen informasjonskapsler. Posisjonen din brukes bare når du ber om det, og sendes til Entur kun for å finne holdeplasser og planlegge reiser. Valg av språk og tema lagres bare i nettleseren din.',
+  allDepartures: 'Alle avganger',
+  nearTitle: 'Dine fem nærmeste holdeplasser',
+  near: 'Trykk på <b>Bruk posisjonen min</b> (eller skriv hvor du er). Vi finner de fem holdeplassene nærmest deg — buss, trikk, T-bane, båt eller tog — og nummererer dem 1 til 5 på kartet, nærmeste først. Rundt deg tegnes en stiplet sirkel med radius <b>r</b>: avstanden til den femte holdeplassen. Alt innenfor er innen den gangavstanden, og kartet zoomer slik at hele sirkelen synes. Trykk på et nummer for å se navnet på holdeplassen, hva som stopper der og de neste avgangene; hele avgangstavlen står nedenfor.',
   footNow: (n, l) => `Akkurat nå er ${n} busser, trikker, tog og båter i bevegelse på ${l} linjer.`
 });
 let language = 'en';
@@ -966,6 +972,7 @@ function renderExplainer() {
     <div class="explainer-grid">
       ${section('whyTitle', `<p>${t('why')}</p>`)}
       ${section('helpsTitle', `<ul class="helps">${['helpPlan', 'helpTrack', 'helpNear', 'helpBrowse'].map(key => `<li>${t(key)}</li>`).join('')}</ul>`)}
+      ${section('nearTitle', `<p>${t('near')}</p>`)}
       ${section('vehiclesTitle', `<p>${t('vehicles')(live)}</p>`)}
       ${section('freshTitle', `<p>${escapeHTML(t('fresh')(date, lastRealtimeOk ? clockTime(lastRealtimeOk) : ''))}</p>`)}
       ${section('privacyTitle', `<p>${escapeHTML(t('privacy'))}</p>`)}
@@ -1517,7 +1524,7 @@ placeInput.addEventListener('keydown', event => { if (event.key === 'Enter') { e
 async function loadNearbyStops(lat, lng) {
   nearbyController?.abort(); departuresController?.abort(); clearTimeout(departuresTimer);
   const controller = new AbortController(); nearbyController = controller;
-  nearbyStops = []; selectedStop = null; departuresCache = null; nearbyStopLayer.clearLayers(); nearbyAreaLayer.clearLayers();
+  nearbyStops = []; selectedStop = null; departuresCache = null; nearbyStopLayer.clearLayers(); nearbyAreaLayer.clearLayers(); map.closePopup(stopPopup);
   $('nearby-section').hidden = false;
   nearbyPrivacy.hidden = false; nearbyPrivacy.textContent = t('nearbyPrivacy');
   nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbySearching'))}</div>`;
@@ -1565,10 +1572,10 @@ function renderNearbyStops() {
     <span class="near-num">${index + 1}</span><span class="near-name">${escapeHTML(stop.name)}<small>${stop.modes.map(mode => `<i class="mode-${mode}"></i>${escapeHTML(modeLabel(mode))}`).join(' ')}</small></span><span class="near-dist">${distanceLabel(stop.distance)}</span></button>`).join('');
   const last = nearbyStops[nearbyStops.length - 1];
   nearbyBox.innerHTML = `<div class="near-list">${rows}</div><div class="hint fine">${escapeHTML(t('nearbyRadius')(distanceLabel(last.distance)))}</div><div id="board"></div>`;
-  nearbyBox.querySelectorAll('[data-stop]').forEach(button => button.addEventListener('click', () => loadDepartures(nearbyStops[Number(button.dataset.stop)])));
+  nearbyBox.querySelectorAll('[data-stop]').forEach(button => button.addEventListener('click', () => openStop(nearbyStops[Number(button.dataset.stop)])));
   nearbyStops.forEach((stop, index) => {
     L.marker([stop.lat, stop.lng], { zIndexOffset: 1500, icon: L.divIcon({ className: '', iconSize: [22, 22], iconAnchor: [11, 11], html: `<div class="near-pin${selectedStop === stop.id ? ' active' : ''}">${index + 1}</div>` }) })
-      .bindTooltip(escapeHTML(stop.name), { direction: 'top', offset: [0, -12] }).on('click', () => loadDepartures(stop)).addTo(nearbyStopLayer);
+      .bindTooltip(escapeHTML(stop.name), { direction: 'top', offset: [0, -12] }).on('click', () => openStop(stop)).addTo(nearbyStopLayer);
   });
   if (departuresCache) renderBoard();
 }
@@ -1590,6 +1597,38 @@ function modeFromTransport(transportMode, line) {
   if (transportMode === 'water') return 'boat';
   return isCityBus(line) ? 'bus' : 'regional';
 }
+/** A small card on the map for a tapped stop: works on phones, where there is no hover. */
+const stopPopup = L.popup({ className: 'stop-popup', offset: [0, -8], maxWidth: 260, minWidth: 200, autoPanPadding: [20, 70] });
+let popupStopId = null;
+stopPopup.on('remove', () => { popupStopId = null; });
+function openStop(stop) {
+  popupStopId = stop.id;
+  stopPopup.setLatLng([stop.lat, stop.lng]).setContent(stopPopupHTML(stop)).openOn(map);
+  loadDepartures(stop);
+}
+function stopPopupHTML(stop) {
+  const index = nearbyStops.indexOf(stop);
+  const modes = stop.modes.map(mode => `<i class="mode-${mode}"></i>${escapeHTML(modeLabel(mode))}`).join(' ');
+  let list = `<div class="sp-hint">${escapeHTML(t('departuresLoading'))}</div>`;
+  if (departuresCache?.stop.id === stop.id) {
+    const now = Date.now();
+    const calls = departuresCache.calls.filter(call => !call.cancellation && Date.parse(call.expectedDepartureTime) > now - 30000).slice(0, 3);
+    list = calls.length ? calls.map(call => {
+      const line = call.serviceJourney?.journeyPattern?.line || {};
+      const expected = Date.parse(call.expectedDepartureTime), mins = Math.floor((expected - now) / 60000);
+      return `<div class="sp-dep"><span class="badge sm mode-${modeFromTransport(line.transportMode, line.publicCode)}">${escapeHTML(line.publicCode || '—')}</span><span class="sp-dest">${escapeHTML(call.destinationDisplay?.frontText || '')}</span><span class="sp-time">${call.realtime ? '<span class="rt-mark"></span>' : ''}${escapeHTML(mins < 1 ? t('now') : mins < 15 ? `${mins} ${t('min')}` : clockTime(expected))}</span></div>`;
+    }).join('') : `<div class="sp-hint">${escapeHTML(t('departuresNone'))}</div>`;
+  }
+  return `<div class="sp-head">${index >= 0 ? `<span class="near-num">${index + 1}</span>` : ''}<span><b>${escapeHTML(stop.name)}</b><small>${modes}${stop.distance != null ? ` · ${distanceLabel(stop.distance)}` : ''}</small></span></div>
+    <div class="sp-list">${list}</div><button type="button" class="sp-more" data-board-link>${escapeHTML(t('allDepartures'))} ↓</button>`;
+}
+map.on('popupopen', event => {
+  event.popup.getElement()?.querySelector('[data-board-link]')?.addEventListener('click', () => $('board')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+});
+function refreshStopPopup() {
+  const stop = nearbyStops.find(item => item.id === popupStopId);
+  if (stop && map.hasLayer(stopPopup)) { stopPopup.setContent(stopPopupHTML(stop)); map.fire('popupopen', { popup: stopPopup }); }
+}
 async function loadDepartures(stop) {
   departuresController?.abort(); clearTimeout(departuresTimer);
   const controller = new AbortController(); departuresController = controller;
@@ -1605,7 +1644,7 @@ async function loadDepartures(stop) {
     const payload = await response.json();
     if (payload.errors?.length) throw new Error(payload.errors[0].message);
     departuresCache = { stop, calls: payload.data?.stopPlace?.estimatedCalls || [], fetched: Date.now() };
-    renderBoard();
+    renderBoard(); refreshStopPopup();
   } catch (error) {
     if (error.name === 'AbortError') return;
     const target = $('board'); if (target && !departuresCache) target.innerHTML = `<div class="hint">${escapeHTML(t('departuresError'))}</div>`;

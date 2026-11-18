@@ -428,3 +428,19 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 .near-name small i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--c); margin: 0 3px 0 2px; }
 .near-dist { font: 500 11px 'DM Mono', monospace; color: var(--ink-2); }
 .radius-label { transform: translate(-50%, -150%); white-space: nowrap; font: 600 11px 'DM Mono', monospace; color: var(--ink); background: color-mix(in srgb, var(--panel) 88%, transparent); padding: 1px 6px; border-radius: 6px; box-shadow: 0 1px 3px #0002; width: max-content; }
+
+/* ── Stop card on the map ── */
+.stop-popup .leaflet-popup-content-wrapper { background: var(--panel); color: var(--ink); border-radius: 12px; box-shadow: var(--shadow); }
+.stop-popup .leaflet-popup-tip { background: var(--panel); }
+.stop-popup .leaflet-popup-content { margin: 11px 12px; font: 400 12px/1.4 'DM Sans', sans-serif; }
+.stop-popup a.leaflet-popup-close-button { color: var(--muted); }
+.sp-head { display: flex; gap: 9px; align-items: center; padding-right: 14px; }
+.sp-head b { display: block; font-size: 13.5px; }
+.sp-head small { display: block; color: var(--muted); font-size: 10.5px; }
+.sp-head small i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--c); margin: 0 3px 0 2px; }
+.sp-list { margin: 9px 0 6px; display: grid; gap: 5px; }
+.sp-dep { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px; align-items: center; }
+.sp-dest { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-time { font: 500 11.5px 'DM Mono', monospace; white-space: nowrap; }
+.sp-hint { color: var(--muted); font-size: 11.5px; }
+.sp-more { border: 0; background: none; padding: 2px 0; color: var(--accent); font-weight: 600; font-size: 11.5px; }
