@@ -96,12 +96,17 @@ Object.assign(copy.en, {
   planNone: 'No trips found in the next few hours.', tripWalk: 'Walk', tripChanges: n => n === 0 ? 'Direct' : n === 1 ? '1 change' : `${n} changes`,
   tripTowards: 'towards', tripStops: n => n === 1 ? '1 stop' : `${n} stops`, tripLeaves: 'Leaves', tripLater: 'Later trips',
   tripCaveat: 'Planned by Entur, the same journey planner Ruter uses. Live times where available.',
+  trackAt: (v, stop) => `${v} is at ${stop} now`, trackBetween: (v, a, b) => `${v} is between ${a} and ${b}`,
+  trackAtYours: v => `${v} is at your stop now — get on!`, trackLeft: (v, stop) => `${v} has already left ${stop}. Pick a later trip.`,
+  trackNotStarted: (v, stop, time) => `${v} starts from ${stop} at ${time}`, trackStartsHere: (v, time) => `${v} starts from your stop at ${time}`,
+  trackAway: n => n === 1 ? '1 stop away' : `${n} stops away`, trackReaches: (stop, time) => `at ${stop} ${time}`,
+  trackLive: 'live position', trackEstimate: 'estimated from the timetable', trackShow: 'Show it on the map', trackWhole: 'Whole trip',
+  trackBoard: 'Get on here', trackYour: 'Your',
   hours: 'h', rail: 'Train', water: 'Boat', coach: 'Coach', metroMode: 'T-bane', tramMode: 'Tram', busMode: 'Bus',
   themeAuto: 'Theme: automatic (follows your device). Click for light.',
   themeLight: 'Theme: light. Click for dark.',
   themeDark: 'Theme: dark. Click for automatic.',
   brandSub: 'Oslo public transport, live', heading: 'Where are you going?',
-  intro: 'Tell us where you are and where you want to go. We’ll show the next direct bus, tram, T-bane or boat — with live times.',
   where: 'From', destination: 'To', placeHelp: 'Share your location or type a place.', locate: 'Use my location',
   originSet: 'Now choose where you’re going.', directRides: 'Direct rides', linesBrowse: 'Browse all lines',
   nearbySection: 'Departures near you', ridesNear: 'Lines stopping near',
@@ -124,12 +129,17 @@ Object.assign(copy.no, {
   planNone: 'Fant ingen reiser de neste timene.', tripWalk: 'Gå', tripChanges: n => n === 0 ? 'Direkte' : n === 1 ? '1 bytte' : `${n} bytter`,
   tripTowards: 'mot', tripStops: n => n === 1 ? '1 stopp' : `${n} stopp`, tripLeaves: 'Går', tripLater: 'Senere reiser',
   tripCaveat: 'Planlagt av Entur, samme reiseplanlegger som Ruter bruker. Sanntid der det finnes.',
+  trackAt: (v, stop) => `${v} er ved ${stop} nå`, trackBetween: (v, a, b) => `${v} er mellom ${a} og ${b}`,
+  trackAtYours: v => `${v} står ved holdeplassen din nå — gå på!`, trackLeft: (v, stop) => `${v} har allerede gått fra ${stop}. Velg en senere reise.`,
+  trackNotStarted: (v, stop, time) => `${v} starter fra ${stop} kl. ${time}`, trackStartsHere: (v, time) => `${v} starter fra holdeplassen din kl. ${time}`,
+  trackAway: n => n === 1 ? '1 stopp unna' : `${n} stopp unna`, trackReaches: (stop, time) => `ved ${stop} ${time}`,
+  trackLive: 'sanntidsposisjon', trackEstimate: 'beregnet fra rutetabellen', trackShow: 'Vis på kartet', trackWhole: 'Hele reisen',
+  trackBoard: 'Gå på her', trackYour: 'Din',
   hours: 't', rail: 'Tog', water: 'Båt', coach: 'Ekspressbuss', metroMode: 'T-bane', tramMode: 'Trikk', busMode: 'Buss',
   themeAuto: 'Tema: automatisk (følger enheten din). Klikk for lyst.',
   themeLight: 'Tema: lyst. Klikk for mørkt.',
   themeDark: 'Tema: mørkt. Klikk for automatisk.',
   brandSub: 'Kollektivtrafikk i Oslo, live', heading: 'Hvor skal du?',
-  intro: 'Fortell oss hvor du er og hvor du skal. Vi viser neste direkte buss, trikk, T-bane eller båt — med sanntid.',
   where: 'Fra', destination: 'Til', placeHelp: 'Del posisjonen din eller skriv et sted.', locate: 'Bruk posisjonen min',
   originSet: 'Velg nå hvor du skal.', directRides: 'Direkte reiser', linesBrowse: 'Se alle linjer',
   nearbySection: 'Avganger i nærheten', ridesNear: 'Linjer som stopper nær',
@@ -448,7 +458,7 @@ function realtimeTargets() {
   const focus = selectedRouteId();
   const soon = now + 10 * 60000;
   return timetable.trips.filter(trip => {
-    const wanted = REALTIME_MODES.has(trip.route.mode) || trip.routeId === focus;
+    const wanted = REALTIME_MODES.has(trip.route.mode) || trip.routeId === focus || trip === tracker?.trip;
     if (!wanted) return false;
     const begin = Math.min(trip.begin, trip.origin + (trip.start + trip.pattern.t[0]) * 1000);
     return begin <= soon && trip.end >= now - 60000;
@@ -1080,8 +1090,8 @@ const TRIP_QUERY = `query($from: Location!, $to: Location!) {
     tripPatterns { aimedStartTime expectedStartTime expectedEndTime duration
       legs { mode distance duration aimedStartTime expectedStartTime aimedEndTime expectedEndTime realtime
         fromPlace { name } toPlace { name }
-        line { publicCode transportSubmode }
-        fromEstimatedCall { destinationDisplay { frontText } quay { publicCode } }
+        line { publicCode transportSubmode } serviceDate serviceJourney { id }
+        fromEstimatedCall { stopPositionInPattern destinationDisplay { frontText } quay { publicCode latitude longitude } }
         intermediateEstimatedCalls { quay { id } }
         pointsOnLink { points } } } } }`;
 const journeyLayer = L.layerGroup().addTo(map);
@@ -1134,7 +1144,7 @@ function planCard(plan, index, now) {
   const open = index === journeyOpen;
   let steps = '';
   if (open) {
-    steps = '<ol class="trip-steps">' + plan.legs.map(leg => {
+    steps = '<div class="tracker" id="tracker" hidden></div><ol class="trip-steps">' + plan.legs.map(leg => {
       if (leg.mode === 'foot') return `<li class="step walk"><span class="step-time">${clockTime(leg.start)}</span><span class="step-line"></span><span class="step-body">${escapeHTML(t('tripWalk'))} ${distanceLabel(leg.distance)} · ${durationLabel(leg.duration * 1000)}<small>${escapeHTML(leg.toPlace.name === 'Destination' ? destination.label : leg.toPlace.name)}</small></span></li>`;
       const towards = leg.fromEstimatedCall?.destinationDisplay?.frontText;
       const quay = leg.fromEstimatedCall?.quay?.publicCode;
@@ -1177,7 +1187,136 @@ function drawJourney(plan, fit) {
     L.polyline(points, { renderer, color, weight: 6, opacity: 1, interactive: false }).addTo(journeyLayer);
     for (const point of [points[0], points[points.length - 1]]) L.circleMarker(point, { renderer, radius: 4.5, color, weight: 2.5, fillColor: palette.panel, fillOpacity: 1, interactive: false }).addTo(journeyLayer);
   }
-  if (fit && all.length) map.flyToBounds(L.latLngBounds(all), { padding: [50, 50], maxZoom: 15, duration: 0.6 });
+  journeyBounds = all.length ? L.latLngBounds(all) : null;
+  if (fit && journeyBounds) map.flyToBounds(journeyBounds, { padding: [50, 50], maxZoom: 15, duration: 0.6 });
+}
+let journeyBounds = null;
+
+/* ── "Where is my bus now?": follow the vehicle of the first ride ─────────── */
+const trackLayer = L.layerGroup().addTo(map);
+let tracker = null, trackerMarker = null, trackerTimer = null, trackerFetch = null;
+/** Stop-by-stop source for the tracked ride: our timetable trip (Ruter) or Entur's live calls (other operators). */
+function trackerSource(entry) {
+  const trip = entry.trip;
+  if (trip) {
+    const q = i => trip.pattern.quays[trip.pattern.s[i]];
+    return { n: trip.pattern.s.length, name: i => q(i)[0], point: i => [q(i)[1], q(i)[2]], arr: i => arrivalAt(trip, i), dep: i => departureAt(trip, i), live: !!trip.rt?.live };
+  }
+  const calls = entry.calls;
+  if (!calls?.length) return null;
+  return { n: calls.length, name: i => calls[i].name, point: i => calls[i].point, arr: i => calls[i].arr, dep: i => calls[i].dep, live: calls.some(call => call.live) };
+}
+function trackerProgress(src, now) {
+  if (now < src.dep(0)) return { prev: 0, next: 0, f: 0, dwell: true, before: true };
+  let k = 1;
+  while (k < src.n && src.arr(k) <= now) k++;
+  if (k === src.n) return { prev: src.n - 1, next: src.n - 1, f: 1, dwell: true, after: true };
+  const prev = k - 1;
+  if (now < src.dep(prev)) return { prev, next: prev, f: 0, dwell: true };
+  const span = src.arr(k) - src.dep(prev);
+  return { prev, next: k, f: span > 0 ? (now - src.dep(prev)) / span : 1, dwell: false };
+}
+function trackerPosition(src, state) {
+  if (tracker.trip) return tripPosition(tracker.trip, state);
+  const a = src.point(state.prev), b = src.point(state.next), f = state.dwell ? 0 : state.f;
+  return { lat: a[0] + (b[0] - a[0]) * f, lng: a[1] + (b[1] - a[1]) * f };
+}
+async function fetchTrackerCalls(entry) {
+  const query = `{ serviceJourney(id: ${JSON.stringify(entry.leg.serviceJourney.id)}) { estimatedCalls(date: "${entry.leg.serviceDate}") {
+    realtime aimedArrivalTime expectedArrivalTime actualArrivalTime aimedDepartureTime expectedDepartureTime actualDepartureTime quay { name latitude longitude } } } }`;
+  const response = await fetch(JOURNEY_PLANNER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'ET-Client-Name': CLIENT_NAME }, body: JSON.stringify({ query }) });
+  if (!response.ok) throw new Error(`Vehicle ${response.status}`);
+  const calls = (await response.json()).data?.serviceJourney?.estimatedCalls || [];
+  if (tracker !== entry) return;
+  entry.calls = calls.map(call => {
+    const arr = Date.parse(call.actualArrivalTime || call.expectedArrivalTime || call.aimedArrivalTime || call.expectedDepartureTime);
+    const dep = Date.parse(call.actualDepartureTime || call.expectedDepartureTime || call.aimedDepartureTime || call.expectedArrivalTime);
+    return { name: call.quay.name, point: [call.quay.latitude, call.quay.longitude], arr, dep: Math.max(arr, dep), live: call.realtime };
+  });
+  updateTracker();
+}
+function stopTracking() {
+  clearInterval(trackerTimer); clearInterval(trackerFetch); trackerTimer = trackerFetch = null;
+  tracker = null; trackerMarker = null; trackLayer.clearLayers();
+}
+function startTracking(plan, fit) {
+  const leg = plan?.legs.find(item => item.mode !== 'foot' && item.serviceJourney);
+  const id = leg?.serviceJourney.id;
+  if (!leg) { stopTracking(); if (fit && journeyBounds) map.flyToBounds(journeyBounds, { padding: [50, 50], maxZoom: 15, duration: 0.6 }); return; }
+  if (tracker?.id === `${id}|${leg.serviceDate}`) { tracker.leg = leg; updateTracker(); if (fit) fitTracker(); return; }
+  stopTracking();
+  const board = leg.fromEstimatedCall?.stopPositionInPattern ?? 0;
+  // The same journey id runs every day, and before 06:00 yesterday's file is loaded too: match the service date,
+  // and make sure our stop numbering agrees with Entur's before trusting the timetable copy.
+  const trip = timetable.status === 'ready' ? timetable.trips.find(item => item.id === id && item.date === leg.serviceDate
+    && board < item.pattern.s.length && Math.abs(departureAt(item, board) - leg.start) < 20 * 60000) : null;
+  tracker = { id: `${id}|${leg.serviceDate}`, leg, trip, board, calls: null };
+  const color = palette[legColor(leg)] || palette.ink;
+  trackerMarker = L.marker([0, 0], { interactive: false, zIndexOffset: 2500, icon: L.divIcon({ className: '', iconSize: [0, 0],
+    html: `<div class="track-pin mode-${legColor(leg)}"><span>${escapeHTML(leg.line?.publicCode || '')}</span></div>` }) });
+  const boardQuay = leg.fromEstimatedCall?.quay;
+  if (boardQuay?.latitude) {
+    L.circleMarker([boardQuay.latitude, boardQuay.longitude], { radius: 7, color, weight: 3, fillColor: palette.panel, fillOpacity: 1, interactive: false })
+      .bindTooltip(`${escapeHTML(t('trackBoard'))} · ${escapeHTML(leg.fromPlace.name)}`, { permanent: true, direction: 'right', offset: [8, 0], className: 'board-label' }).addTo(trackLayer);
+  }
+  trackerTimer = setInterval(updateTracker, 1000);
+  if (trip) scheduleRealtime(0);
+  else {
+    const entry = tracker;
+    const load = () => fetchTrackerCalls(entry).catch(error => console.warn(error));
+    load().then(() => { if (fit) fitTracker(); });
+    trackerFetch = setInterval(load, 30000);
+  }
+  updateTracker();
+  if (fit) fitTracker();
+}
+/** Zoom to you, the stop you board at and the vehicle — or the whole trip if the vehicle isn't on its way. */
+function fitTracker() {
+  const view = tracker && trackerView();
+  if (!view) { if (journeyBounds) map.flyToBounds(journeyBounds, { padding: [50, 50], maxZoom: 15, duration: 0.6 }); return; }
+  map.flyToBounds(L.latLngBounds(view), { padding: [70, 70], maxZoom: 16, duration: 0.7 });
+}
+function trackerView() {
+  const src = trackerSource(tracker);
+  if (!src) return null;
+  const state = trackerProgress(src, Date.now());
+  if (state.after || state.prev > tracker.board || (state.prev === tracker.board && !state.dwell)) return null;
+  const pos = trackerPosition(src, state);
+  return [[pos.lat, pos.lng], src.point(tracker.board), ...(origin ? [origin.point] : [])];
+}
+function updateTracker() {
+  if (!tracker) return;
+  const box = $('tracker');
+  const src = trackerSource(tracker);
+  if (!src || tracker.board >= src.n) { if (box) box.hidden = true; trackerMarker?.remove(); return; }
+  const now = Date.now(), leg = tracker.leg, board = tracker.board;
+  const state = trackerProgress(src, now);
+  const vehicle = `${legModeName(leg)} ${leg.line?.publicCode || ''}`.trim();
+  const passed = state.after || state.prev > board || (state.prev === board && !state.dwell && !state.before);
+  let title, sub = '';
+  if (state.before && board === 0) title = t('trackStartsHere')(vehicle, clockTime(src.dep(0)));
+  else if (passed) title = t('trackLeft')(vehicle, src.name(board));
+  else if (state.dwell && state.prev === board && !state.before) title = t('trackAtYours')(vehicle);
+  else if (state.before) title = t('trackNotStarted')(vehicle, src.name(0), clockTime(src.dep(0)));
+  else if (state.dwell) title = t('trackAt')(vehicle, src.name(state.prev));
+  else title = t('trackBetween')(vehicle, src.name(state.prev), src.name(state.next));
+  if (board > 0 && !passed && !(state.dwell && state.prev === board && !state.before)) {
+    const away = board - (state.dwell ? state.prev : state.prev + 1) + (state.dwell ? 0 : 1);
+    const reach = src.dep(board);
+    sub = `${t('trackAway')(Math.max(1, away))} · ${t('trackReaches')(src.name(board), clockTime(reach))} (${minutesUntil(reach, now)})`;
+  }
+  const onRoad = !state.before && !passed;
+  if (onRoad && trackerMarker) {
+    const pos = trackerPosition(src, state);
+    trackerMarker.setLatLng([pos.lat, pos.lng]);
+    if (!trackLayer.hasLayer(trackerMarker)) trackerMarker.addTo(trackLayer);
+  } else trackerMarker?.remove();
+  if (!box) return;
+  box.hidden = false;
+  box.classList.toggle('gone', passed);
+  const html = `<div class="tracker-pulse mode-${legColor(leg)}"></div><div class="tracker-text"><b>${escapeHTML(title)}</b>${sub ? `<span>${escapeHTML(sub)}</span>` : ''}<small>${src.live ? `<span class="rt-mark"></span>${escapeHTML(t('trackLive'))}` : escapeHTML(t('trackEstimate'))}</small></div>
+    <div class="tracker-actions">${onRoad ? `<button type="button" data-track="show">${escapeHTML(t('trackShow'))}</button>` : ''}<button type="button" data-track="whole">${escapeHTML(t('trackWhole'))}</button></div>`;
+  if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
 }
 function renderJourney(fit = false) {
   const now = Date.now();
@@ -1186,7 +1325,9 @@ function renderJourney(fit = false) {
   const html = plans.map((plan, index) => planCard(plan, index, now)).join('') + `<div class="caveat">${escapeHTML(t('tripCaveat'))}</div>`;
   setRides(plans.length ? html : '', t('tripOptions'));
   if (!plans.length) destinationStatus.textContent = t('planNone');
-  drawJourney(plans[journeyOpen >= 0 ? journeyOpen : 0], fit);
+  const plan = plans[journeyOpen >= 0 ? journeyOpen : 0];
+  drawJourney(plan, false);
+  startTracking(journeyOpen >= 0 ? plan : null, fit);
 }
 async function refreshJourney(fit) {
   const token = ++journeyToken;
@@ -1196,6 +1337,7 @@ async function refreshJourney(fit) {
     const plans = await planJourney(origin, destination);
     if (token !== journeyToken) return;
     destinationStatus.textContent = '';
+    if (!journeyPlans.length && journeyOpen < 0) journeyOpen = 0; // open the best option straight away
     journeyPlans = plans;
     renderJourney(fit);
   } catch (error) {
@@ -1210,7 +1352,7 @@ function showDestination(point, label, moveMap = true) {
   if (!destinationMarker) destinationMarker = L.marker(point, { icon: L.divIcon({ className: '', html: '<div class="dest-dot"></div>', iconSize: [20, 20], iconAnchor: [10, 20] }), zIndexOffset: 1800 }).addTo(map);
   destinationMarker.setLatLng(point).bindTooltip(escapeHTML(label), { direction: 'top', offset: [0, -18] });
   if (origin) { refreshJourney(moveMap); return; }
-  journeyLayer.clearLayers(); journeyFor = '';
+  journeyLayer.clearLayers(); stopTracking(); journeyFor = '';
   if (moveMap) map.flyTo(point, 15, { duration: 0.6 });
   showTimetableRides(point, label);
 }
@@ -1236,6 +1378,9 @@ function showTimetableRides(point, label, note = '') {
   setRides(rides.length ? html : '', rideTitle);
 }
 destinationRoutes.addEventListener('click', event => {
+  const action = event.target.closest('[data-track]')?.dataset.track;
+  if (action === 'show') { fitTracker(); return; }
+  if (action === 'whole') { if (journeyBounds) map.flyToBounds(journeyBounds, { padding: [50, 50], maxZoom: 15, duration: 0.6 }); return; }
   const head = event.target.closest('[data-plan]');
   if (!head) return;
   const index = Number(head.dataset.plan);
@@ -1276,7 +1421,7 @@ destinationInput.addEventListener('keydown', event => { if (event.key === 'Enter
 destinationClear.addEventListener('click', () => {
   destination = null; destinationInput.value = ''; destinationClear.hidden = true;
   destinationResults.replaceChildren(); setRides(''); destinationStatus.textContent = t('destinationHelp');
-  destinationMarker?.remove(); destinationMarker = null; journeyLayer.clearLayers(); journeyFor = ''; ++journeyToken; destinationInput.focus();
+  destinationMarker?.remove(); destinationMarker = null; journeyLayer.clearLayers(); stopTracking(); journeyFor = ''; ++journeyToken; destinationInput.focus();
 });
 setInterval(() => {
   if (!destination || destinationResults.childElementCount) return;
