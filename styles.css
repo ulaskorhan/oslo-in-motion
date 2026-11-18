@@ -410,3 +410,16 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 .track-pin::before { content: ""; position: absolute; left: 50%; bottom: -24px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: color-mix(in srgb, var(--c) 35%, transparent); animation: pulse 1.6s ease-out infinite; --c: inherit; }
 .leaflet-tooltip.board-label { font-weight: 600; font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { .tracker-pulse, .track-pin::before { animation: none; } }
+
+/* ── Five closest stops ── */
+.near-list { display: flex; flex-direction: column; gap: 4px; }
+.near-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 7px 9px; border: 1px solid transparent; border-radius: 10px; background: var(--panel-2); text-align: left; }
+.near-row:hover, .near-row.active { border-color: var(--accent); background: var(--accent-soft); }
+.near-num, .near-pin { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--panel); font: 700 11px 'DM Mono', monospace; }
+.near-pin { border: 2px solid var(--panel); box-shadow: 0 2px 6px #0004; box-sizing: border-box; }
+.near-pin.active, .near-row.active .near-num { background: var(--accent); color: var(--on-accent); }
+.near-name { min-width: 0; font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.near-name small { display: block; font-weight: 400; font-size: 10.5px; color: var(--muted); }
+.near-name small i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--c); margin: 0 3px 0 2px; }
+.near-dist { font: 500 11px 'DM Mono', monospace; color: var(--ink-2); }
+.radius-label { transform: translate(-50%, -150%); white-space: nowrap; font: 600 11px 'DM Mono', monospace; color: var(--ink); background: color-mix(in srgb, var(--panel) 88%, transparent); padding: 1px 6px; border-radius: 6px; box-shadow: 0 1px 3px #0002; width: max-content; }

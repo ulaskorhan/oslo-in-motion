@@ -9,7 +9,7 @@ A live-looking transit map of Oslo: every scheduled Ruter vehicle, placed where 
 - **Realtime adjustment.** T-bane, trikk and boat trips (and every trip on a line you select or click) are refreshed every 30 s from Entur's Journey Planner. Those markers use expected and actual stop times, and get a green ring. Other markers follow the published timetable.
 - **Trip details.** Click a vehicle to see its upcoming stops. Scheduled times are struck through next to the expected times, alongside the delay and a "follow vehicle" option.
 - **Journey planning.** Set where you are and where you're going, anywhere in Norway. Entur's Journey Planner (the same one Ruter uses) suggests trips with changes, walking and live times. Open an option to see each step and the route on the map. If Entur can't be reached, the page falls back to direct rides from the day's timetable.
-- **Nearby stop departure boards** come from Entur realtime and refresh every 20 s.
+- **Your five closest stops.** When you share your location (or pick a starting place), the five closest bus, tram, T-bane, boat and train stops are listed and numbered on the map. The map zooms to a circle around you whose radius r is the distance to the fifth stop. Each stop's departure board comes from Entur realtime and refreshes every 20 s.
 - English and Norwegian Bokmål, plus light and dark themes.
 
 Ruter does not publish vehicle GPS positions (Entur's vehicle feed has none for `RUT`). The markers are therefore timetable/realtime estimates, not GPS fixes, and the page says so.

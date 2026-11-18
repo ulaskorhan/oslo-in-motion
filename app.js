@@ -109,7 +109,7 @@ Object.assign(copy.en, {
   brandSub: 'Oslo public transport, live', heading: 'Where are you going?',
   where: 'From', destination: 'To', placeHelp: 'Share your location or type a place.', locate: 'Use my location',
   originSet: 'Now choose where you’re going.', directRides: 'Direct rides', linesBrowse: 'Browse all lines',
-  nearbySection: 'Departures near you', ridesNear: 'Lines stopping near',
+  nearbySection: 'Your 5 closest stops', ridesNear: 'Lines stopping near', nearbyRadius: r => `All within ${r}`,
   legendLive: 'Live updates', legendScheduled: 'Scheduled',
   explainTitle: 'How this map works',
   explainNow: (n, l) => `Right now <b>${n}</b> buses, trams, trains and boats are on the move across <b>${l}</b> lines.`,
@@ -142,7 +142,7 @@ Object.assign(copy.no, {
   brandSub: 'Kollektivtrafikk i Oslo, live', heading: 'Hvor skal du?',
   where: 'Fra', destination: 'Til', placeHelp: 'Del posisjonen din eller skriv et sted.', locate: 'Bruk posisjonen min',
   originSet: 'Velg nå hvor du skal.', directRides: 'Direkte reiser', linesBrowse: 'Se alle linjer',
-  nearbySection: 'Avganger i nærheten', ridesNear: 'Linjer som stopper nær',
+  nearbySection: 'Dine 5 nærmeste holdeplasser', ridesNear: 'Linjer som stopper nær', nearbyRadius: r => `Alle innen ${r}`,
   legendLive: 'Sanntid', legendScheduled: 'Rutetid',
   explainTitle: 'Slik fungerer kartet',
   explainNow: (n, l) => `Akkurat nå er <b>${n}</b> busser, trikker, tog og båter i bevegelse på <b>${l}</b> linjer.`,
@@ -1477,14 +1477,14 @@ placeInput.addEventListener('keydown', event => { if (event.key === 'Enter') { e
 async function loadNearbyStops(lat, lng) {
   nearbyController?.abort(); departuresController?.abort(); clearTimeout(departuresTimer);
   const controller = new AbortController(); nearbyController = controller;
-  nearbyStops = []; selectedStop = null; departuresCache = null; nearbyStopLayer.clearLayers();
+  nearbyStops = []; selectedStop = null; departuresCache = null; nearbyStopLayer.clearLayers(); nearbyAreaLayer.clearLayers();
   $('nearby-section').hidden = false;
   nearbyPrivacy.hidden = false; nearbyPrivacy.textContent = t('nearbyPrivacy');
   nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbySearching'))}</div>`;
   try {
     const url = new URL('https://api.entur.io/geocoder/v1/reverse');
     url.searchParams.set('point.lat', String(lat)); url.searchParams.set('point.lon', String(lng));
-    url.searchParams.set('boundary.circle.radius', '1000'); url.searchParams.set('layers', 'venue'); url.searchParams.set('size', '20');
+    url.searchParams.set('boundary.circle.radius', '3000'); url.searchParams.set('layers', 'venue'); url.searchParams.set('size', '40');
     const response = await fetch(url, { signal: controller.signal, headers: { 'ET-Client-Name': CLIENT_NAME } });
     if (!response.ok) throw new Error('Nearby stop lookup failed');
     const data = await response.json();
@@ -1492,27 +1492,57 @@ async function loadNearbyStops(lat, lng) {
     for (const feature of data.features || []) {
       const p = feature.properties || {}, id = p.id || '', coords = feature.geometry?.coordinates;
       if (!p.name || !coords || !/StopPlace:/i.test(id)) continue;
-      const stop = { id, name: p.name, lat: coords[1], lng: coords[0], distance: metres([lat, lng], [coords[1], coords[0]]) };
+      const modes = stopModes(p.category);
+      if (!modes.length) continue;
+      const stop = { id, name: p.name, lat: coords[1], lng: coords[0], modes, distance: metres([lat, lng], [coords[1], coords[0]]) };
       if (!unique.has(id)) unique.set(id, stop);
     }
-    nearbyStops = [...unique.values()].sort((a, b) => a.distance - b.distance).slice(0, 6);
+    nearbyStops = [...unique.values()].sort((a, b) => a.distance - b.distance).slice(0, 5);
     if (!nearbyStops.length) { nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbyNone'))}</div>`; return; }
     renderNearbyStops();
+    showNearbyCircle(lat, lng, !destination);
     loadDepartures(nearbyStops[0]);
   } catch (error) {
     if (error.name !== 'AbortError') nearbyBox.innerHTML = `<div class="hint">${escapeHTML(t('nearbyError'))}</div>`;
   }
 }
+/** Which of bus, tram, T-bane, boat and train serve a stop, from the geocoder's categories. */
+function stopModes(categories = []) {
+  const found = new Set();
+  for (const category of categories) {
+    if (/metro/i.test(category)) found.add('metro');
+    else if (/tram/i.test(category)) found.add('tram');
+    else if (/ferry|harbour|boat/i.test(category)) found.add('boat');
+    else if (/rail/i.test(category)) found.add('rail');
+    else if (/bus/i.test(category)) found.add('bus');
+  }
+  return ['metro', 'tram', 'bus', 'boat', 'rail'].filter(mode => found.has(mode));
+}
+function modeLabel(mode) { return t({ metro: 'metroMode', tram: 'tramMode', bus: 'busMode', boat: 'water', rail: 'rail' }[mode]); }
 function renderNearbyStops() {
   nearbyStopLayer.clearLayers();
-  const chips = nearbyStops.map((stop, index) => `<button type="button" class="stop-chip${selectedStop === stop.id ? ' active' : ''}" data-stop="${index}">${escapeHTML(stop.name)} <small>${distanceLabel(stop.distance)}</small></button>`).join('');
-  nearbyBox.innerHTML = `<div class="nearby-stop-list">${chips}</div><div id="board"></div>`;
+  const rows = nearbyStops.map((stop, index) => `<button type="button" class="near-row${selectedStop === stop.id ? ' active' : ''}" data-stop="${index}">
+    <span class="near-num">${index + 1}</span><span class="near-name">${escapeHTML(stop.name)}<small>${stop.modes.map(mode => `<i class="mode-${mode}"></i>${escapeHTML(modeLabel(mode))}`).join(' ')}</small></span><span class="near-dist">${distanceLabel(stop.distance)}</span></button>`).join('');
+  const last = nearbyStops[nearbyStops.length - 1];
+  nearbyBox.innerHTML = `<div class="near-list">${rows}</div><div class="hint fine">${escapeHTML(t('nearbyRadius')(distanceLabel(last.distance)))}</div><div id="board"></div>`;
   nearbyBox.querySelectorAll('[data-stop]').forEach(button => button.addEventListener('click', () => loadDepartures(nearbyStops[Number(button.dataset.stop)])));
-  for (const stop of nearbyStops) {
-    L.circleMarker([stop.lat, stop.lng], { radius: 6, color: palette.ink, weight: 2, fillColor: palette.panel, fillOpacity: 1 })
-      .bindTooltip(escapeHTML(stop.name), { direction: 'top', offset: [0, -5] }).on('click', () => loadDepartures(stop)).addTo(nearbyStopLayer);
-  }
+  nearbyStops.forEach((stop, index) => {
+    L.marker([stop.lat, stop.lng], { zIndexOffset: 1500, icon: L.divIcon({ className: '', iconSize: [22, 22], iconAnchor: [11, 11], html: `<div class="near-pin${selectedStop === stop.id ? ' active' : ''}">${index + 1}</div>` }) })
+      .bindTooltip(escapeHTML(stop.name), { direction: 'top', offset: [0, -12] }).on('click', () => loadDepartures(stop)).addTo(nearbyStopLayer);
+  });
   if (departuresCache) renderBoard();
+}
+/** A circle around you whose radius r is the distance to the 5th closest stop; the map zooms to fit it. */
+const nearbyAreaLayer = L.layerGroup().addTo(map);
+function showNearbyCircle(lat, lng, fit) {
+  nearbyAreaLayer.clearLayers();
+  const r = nearbyStops[nearbyStops.length - 1].distance + 15;
+  const nearbyCircle = L.circle([lat, lng], { radius: r, color: palette.ink, weight: 1.5, opacity: .55, dashArray: '5 6', fillColor: palette.ink, fillOpacity: .05, interactive: false });
+  nearbyCircle.addTo(nearbyAreaLayer);
+  const edge = L.latLng(lat, lng).toBounds(r * 2).getNorthEast();
+  L.marker([lat, edge.lng], { interactive: false, icon: L.divIcon({ className: '', iconSize: [0, 0], html: `<div class="radius-label">r = ${distanceLabel(r - 15)}</div>` }) }).addTo(nearbyAreaLayer);
+  L.polyline([[lat, lng], [lat, edge.lng]], { color: palette.ink, weight: 1.5, opacity: .55, dashArray: '2 5', interactive: false }).addTo(nearbyAreaLayer);
+  if (fit) map.flyToBounds(nearbyCircle.getBounds(), { padding: [24, 24], maxZoom: 18, duration: 0.8 });
 }
 function modeFromTransport(transportMode, line) {
   if (transportMode === 'metro') return 'metro';
