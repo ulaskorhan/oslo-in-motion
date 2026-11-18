@@ -50,7 +50,7 @@ const copy = {
     liveData: 'Realtime', nextStop: 'Next', atStop: 'At', departed: 'Departed', arrives: 'Arrives',
     activeTrips: 'Vehicles on this line now', noActiveTrips: 'No vehicle on this line right now.',
     nextFrom: 'Next departure from',
-    note: '<strong>How positions work.</strong> Ruter does not publish GPS positions, so each vehicle is placed from today’s timetable (Entur), adjusted with Entur realtime estimates for T-bane, trikk, boats and any line you select. Between stops, positions are interpolated along the route shape. Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a>. Map © Kartverket. Place search: Photon.',
+    note: '<strong>How positions work.</strong> Ruter does not publish GPS positions, so each vehicle is placed from today’s timetable (Entur), adjusted with Entur realtime estimates for T-bane, trikk, boats and any line you select. Between stops, positions are interpolated along the route shape. Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a>. Map © Kartverket. Place search: Entur.',
     locale: 'en-GB'
   },
   no: {
@@ -86,11 +86,17 @@ const copy = {
     liveData: 'Sanntid', nextStop: 'Neste', atStop: 'Ved', departed: 'Gikk fra', arrives: 'Ankommer',
     activeTrips: 'Kjøretøy på linjen nå', noActiveTrips: 'Ingen kjøretøy på linjen akkurat nå.',
     nextFrom: 'Neste avgang fra',
-    note: '<strong>Slik beregnes posisjonene.</strong> Ruter publiserer ikke GPS-posisjoner, så hvert kjøretøy plasseres etter dagens rutetabell (Entur), justert med sanntidsanslag fra Entur for T-bane, trikk, båt og linjen du velger. Mellom holdeplassene beregnes posisjonen langs traseen. Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a>. Kart © Kartverket. Stedsøk: Photon.',
+    note: '<strong>Slik beregnes posisjonene.</strong> Ruter publiserer ikke GPS-posisjoner, så hvert kjøretøy plasseres etter dagens rutetabell (Entur), justert med sanntidsanslag fra Entur for T-bane, trikk, båt og linjen du velger. Mellom holdeplassene beregnes posisjonen langs traseen. Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a>. Kart © Kartverket. Stedsøk: Entur.',
     locale: 'nb-NO'
   }
 };
 Object.assign(copy.en, {
+  intro: 'Tell us where you are and where you want to go. We’ll find the best way there by bus, tram, T-bane, train or boat — with live times.',
+  tripOptions: 'Ways to get there', planning: 'Finding the best way there…', planFailed: 'Couldn’t reach the journey planner. Showing direct rides from today’s timetable instead.',
+  planNone: 'No trips found in the next few hours.', tripWalk: 'Walk', tripChanges: n => n === 0 ? 'Direct' : n === 1 ? '1 change' : `${n} changes`,
+  tripTowards: 'towards', tripStops: n => n === 1 ? '1 stop' : `${n} stops`, tripLeaves: 'Leaves', tripLater: 'Later trips',
+  tripCaveat: 'Planned by Entur, the same journey planner Ruter uses. Live times where available.',
+  hours: 'h', rail: 'Train', water: 'Boat', coach: 'Coach', metroMode: 'T-bane', tramMode: 'Tram', busMode: 'Bus',
   themeAuto: 'Theme: automatic (follows your device). Click for light.',
   themeLight: 'Theme: light. Click for dark.',
   themeDark: 'Theme: dark. Click for automatic.',
@@ -110,9 +116,15 @@ Object.assign(copy.en, {
   explainFresh: (date, time) => `Timetable for ${date}${time ? ` · live times checked at ${time}` : ''}. Departure boards near you are always live.`,
   explainMissing: 'Today’s timetable hasn’t been published yet, so vehicles aren’t shown. Departure boards near you still work.',
   explainLoading: 'Loading today’s timetable…',
-  credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a> · Map © Kartverket · Place search: Photon / OpenStreetMap'
+  credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a> · Map © Kartverket · Place search: Entur'
 });
 Object.assign(copy.no, {
+  intro: 'Fortell oss hvor du er og hvor du skal. Vi finner beste reise med buss, trikk, T-bane, tog eller båt — med sanntid.',
+  tripOptions: 'Slik kommer du deg dit', planning: 'Finner beste reise …', planFailed: 'Fikk ikke kontakt med reiseplanleggeren. Viser direkte reiser fra dagens rutetabell i stedet.',
+  planNone: 'Fant ingen reiser de neste timene.', tripWalk: 'Gå', tripChanges: n => n === 0 ? 'Direkte' : n === 1 ? '1 bytte' : `${n} bytter`,
+  tripTowards: 'mot', tripStops: n => n === 1 ? '1 stopp' : `${n} stopp`, tripLeaves: 'Går', tripLater: 'Senere reiser',
+  tripCaveat: 'Planlagt av Entur, samme reiseplanlegger som Ruter bruker. Sanntid der det finnes.',
+  hours: 't', rail: 'Tog', water: 'Båt', coach: 'Ekspressbuss', metroMode: 'T-bane', tramMode: 'Trikk', busMode: 'Buss',
   themeAuto: 'Tema: automatisk (følger enheten din). Klikk for lyst.',
   themeLight: 'Tema: lyst. Klikk for mørkt.',
   themeDark: 'Tema: mørkt. Klikk for automatisk.',
@@ -132,7 +144,7 @@ Object.assign(copy.no, {
   explainFresh: (date, time) => `Rutetabell for ${date}${time ? ` · sanntid sjekket ${time}` : ''}. Avgangstavlene i nærheten er alltid i sanntid.`,
   explainMissing: 'Dagens rutetabell er ikke publisert ennå, så kjøretøy vises ikke. Avgangstavlene i nærheten virker fortsatt.',
   explainLoading: 'Henter dagens rutetabell …',
-  credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a> · Kart © Kartverket · Stedsøk: Photon / OpenStreetMap'
+  credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a> · Kart © Kartverket · Stedsøk: Entur'
 });
 let language = 'en';
 try { language = localStorage.getItem('oslo-in-motion-language') === 'no' ? 'no' : 'en'; } catch { /* storage blocked */ }
@@ -180,7 +192,7 @@ function modeName(route) { return t(route.mode); }
 let palette = {};
 function readPalette() {
   const style = getComputedStyle(document.documentElement);
-  for (const key of ['metro', 'tram', 'bus', 'regional', 'boat', 'panel', 'ink', 'good', 'bg']) palette[key] = style.getPropertyValue(`--${key}`).trim();
+  for (const key of ['metro', 'tram', 'bus', 'regional', 'boat', 'rail', 'panel', 'ink', 'good', 'bg']) palette[key] = style.getPropertyValue(`--${key}`).trim();
 }
 readPalette();
 
@@ -963,34 +975,21 @@ $('line-list').addEventListener('click', event => {
 $('search').addEventListener('input', event => { lineQuery = event.target.value.toLowerCase().trim(); renderLineList(); });
 setInterval(() => { if (timetable.status === 'ready') renderLineList(); }, 15000);
 
-/* ── Place search (Photon) ───────────────────────────────────────────────── */
-async function photonSearch(query, signal) {
-  const url = new URL('https://photon.komoot.io/api/');
-  url.searchParams.set('q', query); url.searchParams.set('lat', '59.9139'); url.searchParams.set('lon', '10.7522');
-  url.searchParams.set('bbox', '10.3,59.65,11.7,60.3'); url.searchParams.set('limit', '5');
-  url.searchParams.set('lang', language === 'no' ? 'default' : 'en');
-  const response = await fetch(url, { signal });
+/* ── Place search (Entur geocoder: stops, addresses and places in all of Norway) ── */
+async function placeSearch(query, signal) {
+  const url = new URL('https://api.entur.io/geocoder/v1/autocomplete');
+  url.searchParams.set('text', query); url.searchParams.set('size', '7');
+  url.searchParams.set('lang', language === 'no' ? 'no' : 'en');
+  url.searchParams.set('focus.point.lat', String(map.getCenter().lat)); url.searchParams.set('focus.point.lon', String(map.getCenter().lng));
+  const response = await fetch(url, { signal, headers: { 'ET-Client-Name': CLIENT_NAME } });
   if (!response.ok) throw new Error('Place search failed');
   const data = await response.json();
+  const seen = new Set();
   return (data.features || []).map(feature => {
     const p = feature.properties || {};
-    const label = [p.name, p.street && `${p.street}${p.housenumber ? ` ${p.housenumber}` : ''}`, p.city || p.locality || p.district].filter((v, i, a) => v && a.indexOf(v) === i).join(', ');
     const [lng, lat] = feature.geometry.coordinates;
-    return { label: label || t('places'), point: [lat, lng] };
-  });
-}
-function stopSearch(query) {
-  const q = query.toLocaleLowerCase('nb');
-  const byName = new Map();
-  for (const quay of timetable.quayIndex) {
-    const name = quay.name.toLocaleLowerCase('nb');
-    if (!name.includes(q)) continue;
-    const entry = byName.get(quay.name) || { label: quay.name, lat: 0, lng: 0, n: 0, starts: name.startsWith(q) };
-    entry.lat += quay.lat; entry.lng += quay.lng; entry.n++;
-    byName.set(quay.name, entry);
-  }
-  return [...byName.values()].sort((a, b) => (b.starts - a.starts) || a.label.length - b.label.length).slice(0, 6)
-    .map(entry => ({ label: entry.label, point: [entry.lat / entry.n, entry.lng / entry.n], stop: true }));
+    return { label: p.label || p.name, point: [lat, lng], stop: p.layer === 'venue' };
+  }).filter(item => item.label && !seen.has(item.label) && seen.add(item.label));
 }
 function metres(a, b) { return map.distance(a, b); }
 function distanceLabel(m) { return m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1)} km`; }
@@ -1076,31 +1075,173 @@ function rideRow(ride, direct, now) {
   const live = ride.trip.rt?.live ? '<span class="rt-mark"></span>' : '';
   return `<button type="button" class="dest-row" data-trip="${escapeHTML(ride.trip.id)}"><span class="badge sm mode-${colorKey(route)}">${escapeHTML(route.line)}</span><span class="dest-main"><span class="dest-title">→ ${escapeHTML(ride.trip.pattern.h)}</span><span class="dest-sub" title="${escapeHTML(sub)}">${escapeHTML(sub)}</span></span><span class="dest-time">${live}${clockTime(ride.leaves)}<small>${escapeHTML(minutesUntil(ride.leaves, now))}</small></span></button>`;
 }
+const TRIP_QUERY = `query($from: Location!, $to: Location!) {
+  trip(from: $from, to: $to, numTripPatterns: 6, searchWindow: 120, walkSpeed: 1.3) {
+    tripPatterns { aimedStartTime expectedStartTime expectedEndTime duration
+      legs { mode distance duration aimedStartTime expectedStartTime aimedEndTime expectedEndTime realtime
+        fromPlace { name } toPlace { name }
+        line { publicCode transportSubmode }
+        fromEstimatedCall { destinationDisplay { frontText } quay { publicCode } }
+        intermediateEstimatedCalls { quay { id } }
+        pointsOnLink { points } } } } }`;
+const journeyLayer = L.layerGroup().addTo(map);
+let journeyPlans = [], journeyOpen = -1, journeyToken = 0, journeyFor = '';
+
+async function planJourney(from, to) {
+  const response = await fetch(JOURNEY_PLANNER, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'ET-Client-Name': CLIENT_NAME },
+    body: JSON.stringify({ query: TRIP_QUERY, variables: {
+      from: { name: from.label, coordinates: { latitude: from.point[0], longitude: from.point[1] } },
+      to: { name: to.label, coordinates: { latitude: to.point[0], longitude: to.point[1] } } } })
+  });
+  if (!response.ok) throw new Error(`Journey planner ${response.status}`);
+  const data = await response.json();
+  if (data.errors?.length) throw new Error(data.errors[0].message);
+  return (data.data?.trip?.tripPatterns || []).map(pattern => ({
+    start: Date.parse(pattern.expectedStartTime), end: Date.parse(pattern.expectedEndTime),
+    legs: pattern.legs.map(leg => ({
+      ...leg, start: Date.parse(leg.expectedStartTime), end: Date.parse(leg.expectedEndTime),
+      delay: (Date.parse(leg.expectedStartTime) - Date.parse(leg.aimedStartTime)) / 1000
+    })).filter(leg => leg.mode !== 'foot' || leg.distance > 30)
+  })).filter(plan => plan.end > Date.now() - 60000);
+}
+/** Entur leg mode → our colour key. */
+function legColor(leg) {
+  if (leg.mode === 'foot') return 'walk';
+  if (leg.mode === 'water') return 'boat';
+  if (leg.mode === 'bus' || leg.mode === 'coach') return isCityBus(leg.line?.publicCode) ? 'bus' : 'regional';
+  return ['metro', 'tram', 'rail'].includes(leg.mode) ? leg.mode : 'regional';
+}
+function legModeName(leg) { return t({ metro: 'metroMode', tram: 'tramMode', bus: 'busMode', water: 'water', rail: 'rail', coach: 'coach' }[leg.mode] || 'busMode'); }
+function durationLabel(ms) {
+  const minutes = Math.max(1, Math.round(ms / 60000));
+  return minutes < 60 ? `${minutes} ${t('min')}` : `${Math.floor(minutes / 60)} ${t('hours')} ${String(minutes % 60).padStart(2, '0')}`;
+}
+const walkIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m9 21 2.5-7 3 3V21M7.5 11.5 10 8l3.5 1 2 3.5 2.5 1M11.5 14l1.5-5"/></svg>';
+function legChip(leg) {
+  if (leg.mode === 'foot') return `<span class="leg-walk" title="${escapeHTML(t('tripWalk'))}">${walkIcon}<small>${Math.max(1, Math.round(leg.duration / 60))}</small></span>`;
+  return `<span class="badge sm mode-${legColor(leg)}" title="${escapeHTML(legModeName(leg))}">${escapeHTML(leg.line?.publicCode || legModeName(leg))}</span>`;
+}
+function timeHTML(ms, delay) {
+  const late = Math.abs(delay) >= 60;
+  return `${late ? `<s>${clockTime(ms - delay * 1000)}</s> ` : ''}<span class="${late ? 'late' : ''}">${clockTime(ms)}</span>`;
+}
+function planCard(plan, index, now) {
+  const transit = plan.legs.filter(leg => leg.mode !== 'foot');
+  const first = transit[0];
+  const chips = plan.legs.map(legChip).join('<span class="leg-sep" aria-hidden="true">›</span>');
+  const sub = first ? `${legModeName(first)} ${first.line?.publicCode || ''} ${t('from')} ${first.fromPlace.name} ${clockTime(first.start)}` : t('tripWalk');
+  const open = index === journeyOpen;
+  let steps = '';
+  if (open) {
+    steps = '<ol class="trip-steps">' + plan.legs.map(leg => {
+      if (leg.mode === 'foot') return `<li class="step walk"><span class="step-time">${clockTime(leg.start)}</span><span class="step-line"></span><span class="step-body">${escapeHTML(t('tripWalk'))} ${distanceLabel(leg.distance)} · ${durationLabel(leg.duration * 1000)}<small>${escapeHTML(leg.toPlace.name === 'Destination' ? destination.label : leg.toPlace.name)}</small></span></li>`;
+      const towards = leg.fromEstimatedCall?.destinationDisplay?.frontText;
+      const quay = leg.fromEstimatedCall?.quay?.publicCode;
+      const stops = (leg.intermediateEstimatedCalls?.length || 0) + 1;
+      return `<li class="step ride mode-${legColor(leg)}"><span class="step-time">${timeHTML(leg.start, leg.delay)}${leg.realtime ? '<span class="rt-mark" title="Live"></span>' : ''}</span><span class="step-line"></span><span class="step-body">${legChip(leg)} <b>${escapeHTML(leg.fromPlace.name)}</b>${quay ? ` <span class="quay">${escapeHTML(quay)}</span>` : ''}<small>${towards ? `${escapeHTML(t('tripTowards'))} ${escapeHTML(towards)} · ` : ''}${escapeHTML(t('tripStops')(stops))} · ${durationLabel(leg.end - leg.start)}</small><small>→ ${escapeHTML(leg.toPlace.name)} ${clockTime(leg.end)}</small></span></li>`;
+    }).join('') + `<li class="step end"><span class="step-time">${clockTime(plan.end)}</span><span class="step-line"></span><span class="step-body"><b>${escapeHTML(destination.label)}</b></span></li></ol>`;
+  }
+  const live = first?.realtime ? '<span class="rt-mark"></span>' : '';
+  return `<div class="trip-card${open ? ' open' : ''}"><button type="button" class="trip-head" data-plan="${index}" aria-expanded="${open}">
+    <span class="trip-times"><b>${clockTime(plan.start)} – ${clockTime(plan.end)}</b><span class="trip-dur">${durationLabel(plan.end - plan.start)} · ${escapeHTML(t('tripChanges')(Math.max(0, transit.length - 1)))}</span></span>
+    <span class="trip-leaves">${live}${escapeHTML(minutesUntil(plan.start, now))}</span>
+    <span class="trip-chips">${chips}</span>
+    <span class="trip-sub">${escapeHTML(sub)}</span></button>${steps}</div>`;
+}
+function decodePolyline(text) {
+  const points = []; let index = 0, lat = 0, lng = 0;
+  while (index < text.length) {
+    for (const axis of [0, 1]) {
+      let shift = 0, result = 0, byte;
+      do { byte = text.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+      const delta = result & 1 ? ~(result >> 1) : result >> 1;
+      if (axis === 0) lat += delta; else lng += delta;
+    }
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
+function drawJourney(plan, fit) {
+  journeyLayer.clearLayers();
+  if (!plan) return;
+  const renderer = renderers['routes-selected'];
+  const all = [];
+  for (const leg of plan.legs) {
+    const points = leg.pointsOnLink?.points ? decodePolyline(leg.pointsOnLink.points) : [];
+    if (points.length < 2) continue;
+    all.push(...points);
+    if (leg.mode === 'foot') { L.polyline(points, { renderer, color: palette.ink, weight: 3, opacity: .75, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(journeyLayer); continue; }
+    const color = palette[legColor(leg)] || palette.ink;
+    L.polyline(points, { renderer, color: palette.panel, weight: 10, opacity: 1, interactive: false }).addTo(journeyLayer);
+    L.polyline(points, { renderer, color, weight: 6, opacity: 1, interactive: false }).addTo(journeyLayer);
+    for (const point of [points[0], points[points.length - 1]]) L.circleMarker(point, { renderer, radius: 4.5, color, weight: 2.5, fillColor: palette.panel, fillOpacity: 1, interactive: false }).addTo(journeyLayer);
+  }
+  if (fit && all.length) map.flyToBounds(L.latLngBounds(all), { padding: [50, 50], maxZoom: 15, duration: 0.6 });
+}
+function renderJourney(fit = false) {
+  const now = Date.now();
+  const plans = journeyPlans.filter(plan => plan.start > now - 60000).slice(0, 5);
+  if (journeyOpen >= plans.length) journeyOpen = -1;
+  const html = plans.map((plan, index) => planCard(plan, index, now)).join('') + `<div class="caveat">${escapeHTML(t('tripCaveat'))}</div>`;
+  setRides(plans.length ? html : '', t('tripOptions'));
+  if (!plans.length) destinationStatus.textContent = t('planNone');
+  drawJourney(plans[journeyOpen >= 0 ? journeyOpen : 0], fit);
+}
+async function refreshJourney(fit) {
+  const token = ++journeyToken;
+  const key = `${origin.point}|${destination.point}`;
+  if (key !== journeyFor) { journeyPlans = []; journeyOpen = -1; journeyFor = key; destinationStatus.textContent = t('planning'); setRides(''); journeyLayer.clearLayers(); }
+  try {
+    const plans = await planJourney(origin, destination);
+    if (token !== journeyToken) return;
+    destinationStatus.textContent = '';
+    journeyPlans = plans;
+    renderJourney(fit);
+  } catch (error) {
+    if (token !== journeyToken) return;
+    console.warn(error);
+    if (!journeyPlans.length) showTimetableRides(destination.point, destination.label, t('planFailed'));
+  }
+}
 function showDestination(point, label, moveMap = true) {
   destination = { point, label };
   destinationInput.value = label; destinationResults.replaceChildren(); destinationClear.hidden = false;
   if (!destinationMarker) destinationMarker = L.marker(point, { icon: L.divIcon({ className: '', html: '<div class="dest-dot"></div>', iconSize: [20, 20], iconAnchor: [10, 20] }), zIndexOffset: 1800 }).addTo(map);
   destinationMarker.setLatLng(point).bindTooltip(escapeHTML(label), { direction: 'top', offset: [0, -18] });
+  if (origin) { refreshJourney(moveMap); return; }
+  journeyLayer.clearLayers(); journeyFor = '';
   if (moveMap) map.flyTo(point, 15, { duration: 0.6 });
-  if (timetable.status !== 'ready') { destinationStatus.textContent = t('loading'); setRides(''); return; }
+  showTimetableRides(point, label);
+}
+/** Without a starting point (or if Entur is unreachable): lines from today's timetable. */
+function showTimetableRides(point, label, note = '') {
+  if (timetable.status !== 'ready') { destinationStatus.textContent = note || t('loading'); setRides(''); return; }
   const now = Date.now();
-  let html = '';
+  let html = note ? `<div class="caveat">${escapeHTML(note)}</div>` : '';
   let rideTitle = '';
   let rides = origin ? directRides(origin.point, point, now) : [];
   if (rides.length) {
     destinationStatus.textContent = '';
     rideTitle = t('directRides');
-    html = rides.map(ride => rideRow(ride, true, now)).join('');
+    html += rides.map(ride => rideRow(ride, true, now)).join('');
   } else {
     rides = linesNear(point, now);
     destinationStatus.textContent = rides.length ? '' : t('destinationNone');
     rideTitle = `${t('ridesNear')} ${label}`;
-    html = (origin && rides.length ? `<div class="caveat">${escapeHTML(t('noDirect'))}</div>` : '') + rides.map(ride => rideRow(ride, false, now)).join('');
+    html += (origin && rides.length ? `<div class="caveat">${escapeHTML(t('noDirect'))}</div>` : '') + rides.map(ride => rideRow(ride, false, now)).join('');
     if (!origin && rides.length) html += `<div class="caveat">${escapeHTML(t('setOrigin'))}</div>`;
   }
   if (rides.length) html += `<div class="caveat">${escapeHTML(t('destinationCaveat'))}</div>`;
   setRides(rides.length ? html : '', rideTitle);
 }
+destinationRoutes.addEventListener('click', event => {
+  const head = event.target.closest('[data-plan]');
+  if (!head) return;
+  const index = Number(head.dataset.plan);
+  journeyOpen = journeyOpen === index ? -1 : index;
+  renderJourney(true);
+});
 destinationRoutes.addEventListener('click', event => {
   const button = event.target.closest('[data-trip]');
   const trip = button && timetable.trips.find(item => item.id === button.dataset.trip);
@@ -1109,7 +1250,7 @@ destinationRoutes.addEventListener('click', event => {
 function addOption(container, item, onChoose) {
   const option = document.createElement('button');
   option.type = 'button'; option.className = 'result'; option.setAttribute('role', 'option');
-  option.textContent = item.label;
+  option.innerHTML = `<span class="result-icon ${item.stop ? 'stop' : 'place'}" aria-hidden="true"></span><span>${escapeHTML(item.label)}</span>`;
   option.addEventListener('click', () => onChoose(item));
   container.append(option);
 }
@@ -1118,28 +1259,30 @@ destinationInput.addEventListener('input', () => {
   clearTimeout(destinationTimer);
   destinationController?.abort();
   const query = destinationInput.value.trim();
-  destinationResults.replaceChildren(); setRides(''); destinationClear.hidden = !query;
+  destinationResults.replaceChildren(); destinationClear.hidden = !query;
   if (query.length < 2) { destinationStatus.textContent = t('destinationHelp'); return; }
-  const stops = timetable.status === 'ready' ? stopSearch(query) : [];
-  if (stops.length) { addHeading(destinationResults, t('stops')); stops.forEach(stop => addOption(destinationResults, stop, item => showDestination(item.point, item.label))); }
-  if (query.length < 3) { destinationStatus.textContent = t('destinationChoose'); return; }
   destinationStatus.textContent = t('destinationSearching');
   destinationTimer = setTimeout(async () => {
     const controller = new AbortController(); destinationController = controller;
     try {
-      const places = (await photonSearch(query, controller.signal)).filter(place => !stops.some(stop => stop.label.toLowerCase() === place.label.toLowerCase()));
-      if (places.length) { addHeading(destinationResults, t('places')); places.forEach(place => addOption(destinationResults, place, item => showDestination(item.point, item.label))); }
-      destinationStatus.textContent = destinationResults.querySelector('.result') ? t('destinationChoose') : t('noPlaces');
-    } catch (error) { if (error.name !== 'AbortError') destinationStatus.textContent = stops.length ? t('destinationChoose') : t('searchError'); }
-  }, 400);
+      const places = await placeSearch(query, controller.signal);
+      destinationResults.replaceChildren();
+      places.forEach(place => addOption(destinationResults, place, item => showDestination(item.point, item.label)));
+      destinationStatus.textContent = places.length ? t('destinationChoose') : t('noPlaces');
+    } catch (error) { if (error.name !== 'AbortError') destinationStatus.textContent = t('searchError'); }
+  }, 250);
 });
 destinationInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); destinationResults.querySelector('.result')?.click(); } });
 destinationClear.addEventListener('click', () => {
   destination = null; destinationInput.value = ''; destinationClear.hidden = true;
   destinationResults.replaceChildren(); setRides(''); destinationStatus.textContent = t('destinationHelp');
-  destinationMarker?.remove(); destinationMarker = null; destinationInput.focus();
+  destinationMarker?.remove(); destinationMarker = null; journeyLayer.clearLayers(); journeyFor = ''; ++journeyToken; destinationInput.focus();
 });
-setInterval(() => { if (destination && timetable.status === 'ready' && !destinationResults.childElementCount) showDestination(destination.point, destination.label, false); }, 30000);
+setInterval(() => {
+  if (!destination || destinationResults.childElementCount) return;
+  if (origin && journeyFor) refreshJourney(false);
+  else if (timetable.status === 'ready') showTimetableRides(destination.point, destination.label);
+}, 60000);
 
 /* ── Where are you: place, location, nearby stops, departure boards ──────── */
 const placeInput = $('place-search'), placeStatus = $('place-status'), placeResults = $('place-results');
@@ -1171,18 +1314,17 @@ placeInput.addEventListener('input', () => {
   clearTimeout(placeTimer); placeController?.abort();
   const query = placeInput.value.trim();
   placeResults.replaceChildren();
-  if (query.length < 3) { placeStatus.textContent = query ? t('minChars') : t('placeHelp'); return; }
+  if (query.length < 2) { placeStatus.textContent = query ? t('minChars') : t('placeHelp'); return; }
+  placeStatus.textContent = t('searchPlaces');
   placeTimer = setTimeout(async () => {
-    placeStatus.textContent = t('searchPlaces');
     const controller = new AbortController(); placeController = controller;
-    const stops = timetable.status === 'ready' ? stopSearch(query).slice(0, 3) : [];
-    if (stops.length) { addHeading(placeResults, t('stops')); stops.forEach(stop => addOption(placeResults, stop, choosePlace)); }
     try {
-      const places = await photonSearch(query, controller.signal);
-      if (places.length) { addHeading(placeResults, t('places')); places.forEach(place => addOption(placeResults, place, choosePlace)); }
-      placeStatus.textContent = placeResults.querySelector('.result') ? t('chooseResult') : t('noPlaces');
-    } catch (error) { if (error.name !== 'AbortError') placeStatus.textContent = stops.length ? t('chooseResult') : t('searchError'); }
-  }, 450);
+      const places = await placeSearch(query, controller.signal);
+      placeResults.replaceChildren();
+      places.forEach(place => addOption(placeResults, place, choosePlace));
+      placeStatus.textContent = places.length ? t('chooseResult') : t('noPlaces');
+    } catch (error) { if (error.name !== 'AbortError') placeStatus.textContent = t('searchError'); }
+  }, 250);
 });
 function choosePlace(item) { placeInput.value = item.label; placeResults.replaceChildren(); setOrigin(item.point[0], item.point[1], item.label); }
 placeInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); placeResults.querySelector('.result')?.click(); } });
@@ -1294,7 +1436,8 @@ function applyLanguage(next) {
   renderThemeButton();
   renderLegend(); updateStats(); updateStatus(); renderLineList(); renderDetail(true); updateClock();
   if (nearbyStops.length) renderNearbyStops();
-  if (destination) showDestination(destination.point, destination.label, false);
+  if (destination && origin && journeyPlans.length) renderJourney(false);
+  else if (destination) showDestination(destination.point, destination.label, false);
 }
 $('lang-en').addEventListener('click', () => applyLanguage('en'));
 $('lang-no').addEventListener('click', () => applyLanguage('no'));
@@ -1314,6 +1457,7 @@ function themeChanged() {
     else { meta.dataset.media = meta.dataset.media || meta.media; meta.media = 'all'; meta.content = dark ? '#121614' : '#f6f5f1'; }
   });
   readPalette(); styleRoutes(); vehicleLayer.draw();
+  if (journeyFor && journeyPlans.length) drawJourney(journeyPlans[Math.max(0, journeyOpen)], false);
 }
 function applyTheme(next) {
   theme = next;

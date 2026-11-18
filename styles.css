@@ -18,6 +18,7 @@
   --bus: #e60000;
   --regional: #6f9b00;
   --boat: #7b3fa0;
+  --rail: #3d4a55;
   --radius: 14px;
   --on-accent: #fff;
   color-scheme: light;
@@ -26,14 +27,14 @@
   :root:not([data-theme="light"]) {
     --bg: #111513; --panel: #171c19; --panel-2: #1f2521; --ink: #edf1ee; --ink-2: #c1c9c4; --muted: #8b958f;
     --line: #2a312d; --line-2: #36403a; --accent: #4fc79a; --accent-soft: #1c3329; --warn: #fb923c; --warn-soft: #3a2417;
-    --good: #4ade80; --shadow: 0 1px 2px #0006, 0 12px 32px #0008; --bus: #ff4d4d; --regional: #9ccc2c; --boat: #b07ad6; --on-accent: #0b1f17;
+    --good: #4ade80; --shadow: 0 1px 2px #0006, 0 12px 32px #0008; --bus: #ff4d4d; --regional: #9ccc2c; --boat: #b07ad6; --rail: #a9b6c2; --on-accent: #0b1f17;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #111513; --panel: #171c19; --panel-2: #1f2521; --ink: #edf1ee; --ink-2: #c1c9c4; --muted: #8b958f;
   --line: #2a312d; --line-2: #36403a; --accent: #4fc79a; --accent-soft: #1c3329; --warn: #fb923c; --warn-soft: #3a2417;
-  --good: #4ade80; --shadow: 0 1px 2px #0006, 0 12px 32px #0008; --bus: #ff4d4d; --regional: #9ccc2c; --boat: #b07ad6; --on-accent: #0b1f17;
+  --good: #4ade80; --shadow: 0 1px 2px #0006, 0 12px 32px #0008; --bus: #ff4d4d; --regional: #9ccc2c; --boat: #b07ad6; --rail: #a9b6c2; --on-accent: #0b1f17;
   color-scheme: dark;
 }
 
@@ -111,7 +112,7 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 /* ── Line badges ─────────────────────────────────── */
 .badge { --c: var(--bus); display: inline-grid; place-items: center; min-width: 34px; height: 26px; padding: 0 6px; border-radius: 7px; background: var(--c); color: #fff; font: 700 12px 'DM Mono', monospace; letter-spacing: -.02em; flex: none; }
 .badge.sm { min-width: 28px; height: 21px; font-size: 11px; border-radius: 6px; }
-.mode-metro { --c: var(--metro); } .mode-tram { --c: var(--tram); } .mode-bus { --c: var(--bus); } .mode-regional { --c: var(--regional); } .mode-boat { --c: var(--boat); }
+.mode-metro { --c: var(--metro); } .mode-tram { --c: var(--tram); } .mode-bus { --c: var(--bus); } .mode-regional { --c: var(--regional); } .mode-boat { --c: var(--boat); } .mode-rail { --c: var(--rail); }
 
 /* ── Destination results ─────────────────────────── */
 .destination-routes { display: grid; gap: 4px; margin-top: 8px; }
@@ -352,3 +353,41 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
   .panel-section, .explainer { margin-left: 12px; margin-right: 12px; }
   .lines { padding: 0 12px 6px; }
 }
+
+/* ── Search results ── */
+.result { display: flex; align-items: center; gap: 9px; }
+.result-icon { width: 16px; height: 16px; flex: none; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line-2); position: relative; }
+.result-icon.stop { background: var(--ink); border-color: var(--ink); }
+.result-icon.stop::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--panel); }
+.result-icon.place { border-radius: 50% 50% 50% 0; transform: rotate(-45deg) scale(.85); }
+
+/* ── Journey options ── */
+.trip-card { border-radius: 12px; background: var(--panel-2); margin-bottom: 8px; border: 1px solid transparent; transition: border-color .15s; }
+.trip-card.open { background: var(--panel); border-color: var(--line-2); box-shadow: var(--shadow); }
+.trip-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; width: 100%; padding: 10px 12px; border: 0; background: none; text-align: left; border-radius: 12px; }
+.trip-head:hover { background: color-mix(in srgb, var(--accent-soft) 60%, transparent); }
+.trip-times b { font: 600 15px 'DM Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -.02em; display: block; }
+.trip-dur { font-size: 11px; color: var(--muted); }
+.trip-leaves { font: 600 12px 'DM Sans', sans-serif; color: var(--accent); align-self: start; white-space: nowrap; padding-top: 2px; }
+.trip-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.leg-sep { color: var(--muted); font-size: 12px; }
+.leg-walk { display: inline-flex; align-items: center; gap: 1px; color: var(--ink-2); font: 500 10px 'DM Mono', monospace; }
+.leg-walk svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.leg-walk svg circle { fill: currentColor; stroke: none; }
+.trip-sub { grid-column: 1 / -1; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-steps { list-style: none; margin: 0; padding: 2px 12px 12px; }
+.step { display: grid; grid-template-columns: 48px 14px minmax(0, 1fr); gap: 8px; min-height: 34px; }
+.step-time { font: 500 11.5px 'DM Mono', monospace; font-variant-numeric: tabular-nums; text-align: right; padding-top: 3px; }
+.step-time s { color: var(--muted); font-size: 10px; display: block; }
+.step-time .late { color: var(--warn); }
+.step-time .rt-mark { margin: 0 0 0 4px; }
+.step-line { position: relative; }
+.step-line::before { content: ""; position: absolute; left: 5px; top: 7px; bottom: -7px; width: 4px; border-radius: 2px; background: var(--c, var(--line-2)); }
+.step-line::after { content: ""; position: absolute; left: 2px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--panel); border: 2.5px solid var(--c, var(--ink-2)); box-sizing: border-box; }
+.step.walk .step-line::before { background: none; border-left: 3px dotted var(--muted); width: 0; left: 6px; }
+.step.end .step-line::before { display: none; }
+.step.end .step-line::after { background: var(--ink); border-color: var(--ink); }
+.step-body { font-size: 12px; padding: 1px 0 10px; min-width: 0; }
+.step-body .badge { vertical-align: 1px; margin-right: 2px; }
+.step-body small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.step-body .quay { font: 500 10px 'DM Mono', monospace; color: var(--muted); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 4px; }

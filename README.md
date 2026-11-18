@@ -8,7 +8,7 @@ A live-looking transit map of Oslo: every scheduled Ruter vehicle, placed where 
 - **One marker per running trip.** At a typical weekday evening that's about 400 vehicles. Positions come from the stop-by-stop timetable and are interpolated along the route shape between stops. Vehicles dwell at stops for as long as the timetable says.
 - **Realtime adjustment.** T-bane, trikk and boat trips (and every trip on a line you select or click) are refreshed every 30 s from Entur's Journey Planner. Those markers use expected and actual stop times, and get a green ring. Other markers follow the published timetable.
 - **Trip details.** Click a vehicle to see its upcoming stops. Scheduled times are struck through next to the expected times, alongside the delay and a "follow vehicle" option.
-- **Direct rides.** Set where you are and where you're going. The page lists the next direct departures within walking distance, with departure and arrival times from the timetable.
+- **Journey planning.** Set where you are and where you're going, anywhere in Norway. Entur's Journey Planner (the same one Ruter uses) suggests trips with changes, walking and live times. Open an option to see each step and the route on the map. If Entur can't be reached, the page falls back to direct rides from the day's timetable.
 - **Nearby stop departure boards** come from Entur realtime and refresh every 20 s.
 - English and Norwegian Bokmål, plus light and dark themes.
 
@@ -39,5 +39,5 @@ Then open http://localhost:8765.
 
 - Timetable, realtime and stop data: Entur, under the Norwegian licence for Open Government data (NLOD). See [Entur's terms](https://developer.entur.no/terms-of-service).
 - Basemap: © [Kartverket](https://www.kartverket.no/) (topografisk gråtone).
-- Place search: [Photon](https://photon.komoot.io/), based on OpenStreetMap data.
-- Browser location is requested only after the user chooses the location button. The coordinates are sent to Entur to find nearby stops.
+- Place search and trip planning: Entur Geocoder and Journey Planner (NLOD).
+- Browser location is requested only after the user chooses the location button. The coordinates are sent to Entur to find nearby stops and plan trips.
