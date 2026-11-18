@@ -47,7 +47,7 @@ const copy = {
     lines: 'Lines', filter: 'Filter by line or destination', running: 'running', noService: 'not today',
     lineOverview: 'All vehicles on', close: 'Close', follow: 'Follow vehicle', towards: 'to',
     onTime: 'On time', late: 'late', early: 'early', timetableOnly: 'Timetable only — no realtime for this trip',
-    liveData: 'Realtime', nextStop: 'Next', atStop: 'At', departed: 'Departed', arrives: 'Arrives',
+    liveData: 'Realtime', nextStop: 'Next', atStop: 'At', departed: 'Departed', arrives: 'Arrives', waiting: 'Waiting at the end stop', waitingAt: 'Waiting at', leaves: 'leaves',
     activeTrips: 'Vehicles on this line now', noActiveTrips: 'No vehicle on this line right now.',
     nextFrom: 'Next departure from',
     note: '<strong>How positions work.</strong> Ruter does not publish GPS positions, so each vehicle is placed from today’s timetable (Entur), adjusted with Entur realtime estimates for T-bane, trikk, boats and any line you select. Between stops, positions are interpolated along the route shape. Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a>. Map © Kartverket. Place search: Entur.',
@@ -83,7 +83,7 @@ const copy = {
     lines: 'Linjer', filter: 'Filtrer på linje eller reisemål', running: 'i rute', noService: 'ikke i dag',
     lineOverview: 'Alle kjøretøy på', close: 'Lukk', follow: 'Følg kjøretøyet', towards: 'mot',
     onTime: 'I rute', late: 'forsinket', early: 'tidlig', timetableOnly: 'Kun rutetid — ingen sanntid for denne turen',
-    liveData: 'Sanntid', nextStop: 'Neste', atStop: 'Ved', departed: 'Gikk fra', arrives: 'Ankommer',
+    liveData: 'Sanntid', nextStop: 'Neste', atStop: 'Ved', departed: 'Gikk fra', arrives: 'Ankommer', waiting: 'Venter på endeholdeplassen', waitingAt: 'Venter på', leaves: 'går',
     activeTrips: 'Kjøretøy på linjen nå', noActiveTrips: 'Ingen kjøretøy på linjen akkurat nå.',
     nextFrom: 'Neste avgang fra',
     note: '<strong>Slik beregnes posisjonene.</strong> Ruter publiserer ikke GPS-posisjoner, så hvert kjøretøy plasseres etter dagens rutetabell (Entur), justert med sanntidsanslag fra Entur for T-bane, trikk, båt og linjen du velger. Mellom holdeplassene beregnes posisjonen langs traseen. Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">vilkår</a>. Kart © Kartverket. Stedsøk: Entur.',
@@ -393,6 +393,7 @@ async function loadTimetable() {
     if (!dates.includes(today)) { timetable.status = 'missing'; updateStatus(); return; }
     const files = await Promise.all(dates.map(date => fetch(`data/timetable-${date}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })));
     files.forEach(ingest);
+    linkLayovers();
     timetable.dates = dates;
     timetable.status = 'ready';
   } catch (error) {
@@ -434,6 +435,37 @@ function ingest(file) {
       timetable.trips.push(trip);
     }
   }
+}
+/* Layovers. Ruter doesn't publish which vehicle runs which trip, but at an end stop (Nesoddtangen, Aker brygge,
+   Helsfyr …) a bus, tram or boat usually waits and then goes back out as the line's next trip from the same place.
+   Pair each departure with the earliest unused arrival of the same line at that stop (same name or within 250 m)
+   in the 45 minutes before it; the departing trip is then shown waiting at its first stop from that arrival on. */
+const LAYOVER_MAX = 45 * 60000, LAYOVER_FALLBACK = 3 * 60000;
+function linkLayovers() {
+  const firstQuay = trip => trip.pattern.quays[trip.pattern.s[0]];
+  const lastQuay = trip => trip.pattern.quays[trip.pattern.s[trip.pattern.s.length - 1]];
+  const near = (a, b) => a[0] === b[0] || Math.hypot((a[1] - b[1]) * 111320, (a[2] - b[2]) * 55800) < 250;
+  for (const line of timetable.lines.values()) {
+    const arrivals = [...line.trips].sort((a, b) => a.end - b.end);
+    const departures = [...line.trips].sort((a, b) => a.begin - b.begin);
+    const used = new Set();
+    let low = 0;
+    for (const trip of departures) {
+      while (low < arrivals.length && arrivals[low].end < trip.begin - LAYOVER_MAX) low++;
+      const from = firstQuay(trip);
+      for (let i = low; i < arrivals.length && arrivals[i].end <= trip.begin; i++) {
+        const prev = arrivals[i];
+        if (prev === trip || used.has(prev) || !near(lastQuay(prev), from)) continue;
+        used.add(prev); trip.layoverPrev = prev; break;
+      }
+    }
+  }
+}
+/** When a trip's vehicle shows up on the map: when it reached this stop on its previous trip, else a few minutes early. */
+function shownFrom(trip) {
+  const prev = trip.layoverPrev;
+  if (prev && !prev.rt?.cancelled) return Math.min(prev.end, trip.begin);
+  return trip.begin - LAYOVER_FALLBACK;
 }
 /** Arrival/departure (epoch ms) at stop i, realtime when known. */
 const arrivalAt = (trip, i) => trip.rt ? trip.rt.arr[i] : trip.origin + (trip.start + trip.pattern.a[i]) * 1000;
@@ -479,9 +511,9 @@ function refreshActive() {
   for (const mode of MODES) activeByMode[mode] = 0;
   for (const trip of timetable.trips) {
     if (trip.rt?.cancelled) continue;
-    if (now >= trip.begin && now <= trip.end) {
+    if (now >= shownFrom(trip) && now <= trip.end) {
       activeTrips.push(trip);
-      activeByMode[trip.route.mode]++;
+      if (now >= trip.begin) activeByMode[trip.route.mode]++;
     }
   }
   updateStats();
@@ -609,7 +641,7 @@ function drawVehicles(ctx, ratio) {
   for (const trip of activeTrips) {
     if (!selectedModes.has(trip.route.mode)) continue;
     const state = tripState(trip, now);
-    if (state.before || state.after) continue;
+    if (state.after) continue;
     const pos = tripPosition(trip, state);
     const p = map.latLngToContainerPoint([pos.lat, pos.lng]);
     if (p.x < -margin || p.y < -margin || p.x > size.x + margin || p.y > size.y + margin) continue;
@@ -802,7 +834,10 @@ map.on('mousemove', event => {
   const nextQuay = quays[hit.trip.pattern.s[state.dwell ? state.prev : state.next]];
   const delay = tripDelay(hit.trip, state);
   const delayText = delay == null ? t('scheduled') : delayLabel(delay).text;
-  tip.innerHTML = `<b>${escapeHTML(modeName(hit.trip.route))} ${escapeHTML(hit.trip.route.line)} → ${escapeHTML(hit.trip.pattern.h)}</b><small>${escapeHTML(state.dwell ? t('atStop') : t('nextStop'))}: ${escapeHTML(nextQuay[0])} · ${escapeHTML(delayText)}</small>`;
+  const where = state.before
+    ? `${escapeHTML(t('waitingAt'))} ${escapeHTML(nextQuay[0])} · ${escapeHTML(t('leaves'))} ${clockTime(departureAt(hit.trip, 0))}`
+    : `${escapeHTML(state.dwell ? t('atStop') : t('nextStop'))}: ${escapeHTML(nextQuay[0])} · ${escapeHTML(delayText)}`;
+  tip.innerHTML = `<b>${escapeHTML(modeName(hit.trip.route))} ${escapeHTML(hit.trip.route.line)} → ${escapeHTML(hit.trip.pattern.h)}</b><small>${where}</small>`;
   tip.style.left = `${hit.x}px`; tip.style.top = `${hit.y}px`; tip.hidden = false;
 });
 map.on('mouseout', () => { tip.hidden = true; });
@@ -836,7 +871,7 @@ function clearSelection() {
 function followSelected() {
   if (!following || selection?.type !== 'trip') return;
   const state = tripState(selection.trip, Date.now());
-  if (state.before || state.after) return;
+  if (state.after) return;
   const pos = tripPosition(selection.trip, state);
   map.panTo([pos.lat, pos.lng], { animate: true, duration: 1.2 });
 }
@@ -862,7 +897,7 @@ function renderDetail(force = false) {
     if (!trip) return;
     selectTrip(trip);
     const state = tripState(trip, Date.now());
-    if (!state.before && !state.after) { const pos = tripPosition(trip, state); map.flyTo([pos.lat, pos.lng], Math.max(map.getZoom(), 14), { duration: 0.6 }); }
+    if (!state.after) { const pos = tripPosition(trip, state); map.flyTo([pos.lat, pos.lng], Math.max(map.getZoom(), 14), { duration: 0.6 }); }
   }));
   if (force) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
@@ -910,7 +945,7 @@ function tripDetailHTML(trip, now) {
   const tags = [];
   if (delay != null) { const d = delayLabel(delay); tags.push(`<span class="tag live"><span class="rt-mark"></span>${escapeHTML(t('liveData'))}</span>`); tags.push(`<span class="tag ${d.cls === 'late' ? 'late' : ''}">${escapeHTML(d.text)}</span>`); }
   else tags.push(`<span class="tag">${escapeHTML(t('timetableOnly'))}</span>`);
-  if (state.before) tags.push(`<span class="tag">${escapeHTML(t('departed'))} ${clockTime(departureAt(trip, 0))}</span>`);
+  if (state.before) tags.push(`<span class="tag">${escapeHTML(t('waiting'))} · ${escapeHTML(t('leaves'))} ${clockTime(departureAt(trip, 0))}</span>`);
   // Timeline window: one passed stop, the current/next stops, then the terminus.
   const n = pattern.s.length, current = state.dwell ? state.prev : state.next;
   const first = Math.max(0, current - 1), last = Math.min(n - 1, current + 7);
@@ -964,7 +999,6 @@ function updateStatus() { renderExplainer(); }
 function renderExplainer() {
   const visible = activeTrips.filter(trip => selectedModes.has(trip.route.mode));
   const live = visible.filter(trip => trip.rt?.live).length;
-  const lines = new Set(visible.map(trip => trip.routeId)).size;
   const latest = timetable.dates[timetable.dates.length - 1];
   const date = latest ? new Intl.DateTimeFormat(t('locale'), { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${latest}T12:00:00Z`)) : '—';
   const section = (title, body) => `<div><h3>${escapeHTML(t(title))}</h3>${body}</div>`;
@@ -984,7 +1018,7 @@ function renderExplainer() {
   let now;
   if (timetable.status === 'loading') now = t('explainLoading');
   else if (timetable.status !== 'ready') now = t('explainMissing');
-  else now = t('footNow')(visible.length, lines);
+  else { const moving = visible.filter(trip => Date.now() >= trip.begin); now = t('footNow')(moving.length, new Set(moving.map(trip => trip.routeId)).size); }
   const fresh = Date.now() - lastRealtimeOk < 120000;
   const dot = fresh ? ' live' : timetable.status === 'ready' || timetable.status === 'loading' ? '' : ' warn';
   const foot = `<p class="foot-now"><span class="status-dot${dot}"></span><span>${escapeHTML(now)}</span></p><p class="credits">${t('credits')}</p>`;
