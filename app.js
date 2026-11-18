@@ -438,9 +438,10 @@ function ingest(file) {
 }
 /* Layovers. Ruter doesn't publish which vehicle runs which trip, but at an end stop (Nesoddtangen, Aker brygge,
    Helsfyr …) a bus, tram or boat usually waits and then goes back out as the line's next trip from the same place.
-   Pair each departure with the earliest unused arrival of the same line at that stop (same name or within 250 m)
-   in the 45 minutes before it; the departing trip is then shown waiting at its first stop from that arrival on. */
-const LAYOVER_MAX = 45 * 60000, LAYOVER_FALLBACK = 3 * 60000;
+   Each departure takes the most recent unused arrival of the same line at that stop (same name or within 250 m)
+   from the 30 minutes before it, and is shown waiting there from that arrival on. Arrivals no departure takes
+   (the vehicle goes to the garage or another line) simply disappear, so nothing stands around for hours. */
+const LAYOVER_MAX = 30 * 60000, LAYOVER_FALLBACK = 3 * 60000;
 function linkLayovers() {
   const firstQuay = trip => trip.pattern.quays[trip.pattern.s[0]];
   const lastQuay = trip => trip.pattern.quays[trip.pattern.s[trip.pattern.s.length - 1]];
@@ -449,11 +450,11 @@ function linkLayovers() {
     const arrivals = [...line.trips].sort((a, b) => a.end - b.end);
     const departures = [...line.trips].sort((a, b) => a.begin - b.begin);
     const used = new Set();
-    let low = 0;
+    let high = 0;
     for (const trip of departures) {
-      while (low < arrivals.length && arrivals[low].end < trip.begin - LAYOVER_MAX) low++;
+      while (high < arrivals.length && arrivals[high].end <= trip.begin) high++;
       const from = firstQuay(trip);
-      for (let i = low; i < arrivals.length && arrivals[i].end <= trip.begin; i++) {
+      for (let i = high - 1; i >= 0 && arrivals[i].end >= trip.begin - LAYOVER_MAX; i--) {
         const prev = arrivals[i];
         if (prev === trip || used.has(prev) || !near(lastQuay(prev), from)) continue;
         used.add(prev); trip.layoverPrev = prev; break;
