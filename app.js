@@ -30,7 +30,7 @@ const copy = {
     destinationChoose: 'Choose a destination.', destinationNone: 'No line stops within walking distance of this place.',
     directRides: 'Direct rides from your location', linesNear: 'Lines stopping near',
     destinationCaveat: 'Times come from today’s timetable, adjusted with realtime where Entur has it.',
-    noDirect: 'No direct ride found — showing lines that stop nearby.', setOrigin: 'Set where you are to see direct rides.',
+    noDirect: 'No direct ride found. Showing lines that stop nearby.', setOrigin: 'Set where you are to see direct rides.',
     walk: 'walk', from: 'from', arrive: 'arr.',
     where: 'Where are you?', placePlaceholder: 'Enter a place in Oslo', locate: 'Use my location',
     placeHelp: 'Choose a place or share your location.', searchPlaces: 'Searching places…',
@@ -46,7 +46,7 @@ const copy = {
     cancelled: 'Cancelled', realtime: 'Realtime', scheduled: 'Scheduled',
     lines: 'Lines', filter: 'Filter by line or destination', running: 'running', noService: 'not today',
     lineOverview: 'All vehicles on', close: 'Close', follow: 'Follow vehicle', towards: 'to',
-    onTime: 'On time', late: 'late', early: 'early', timetableOnly: 'Timetable only — no realtime for this trip',
+    onTime: 'On time', late: 'late', early: 'early', timetableOnly: 'Timetable only, no live times for this trip',
     liveData: 'Realtime', nextStop: 'Next', atStop: 'At', departed: 'Departed', arrives: 'Arrives', waiting: 'Waiting at the end stop', waitingAt: 'Waiting at', leaves: 'leaves',
     activeTrips: 'Vehicles on this line now', noActiveTrips: 'No vehicle on this line right now.',
     nextFrom: 'Next departure from',
@@ -66,7 +66,7 @@ const copy = {
     destinationChoose: 'Velg et reisemål.', destinationNone: 'Ingen linjer stopper i gangavstand fra dette stedet.',
     directRides: 'Direkte reiser fra der du er', linesNear: 'Linjer som stopper nær',
     destinationCaveat: 'Tidene er fra dagens rutetabell, justert med sanntid der Entur har det.',
-    noDirect: 'Fant ingen direkte reise — viser linjer som stopper i nærheten.', setOrigin: 'Angi hvor du er for å se direkte reiser.',
+    noDirect: 'Fant ingen direkte reise. Viser linjer som stopper i nærheten.', setOrigin: 'Angi hvor du er for å se direkte reiser.',
     walk: 'gange', from: 'fra', arrive: 'ank.',
     where: 'Hvor er du?', placePlaceholder: 'Skriv inn et sted i Oslo', locate: 'Bruk posisjonen min',
     placeHelp: 'Velg et sted eller del posisjonen din.', searchPlaces: 'Søker etter steder …',
@@ -82,7 +82,7 @@ const copy = {
     cancelled: 'Innstilt', realtime: 'Sanntid', scheduled: 'Rutetid',
     lines: 'Linjer', filter: 'Filtrer på linje eller reisemål', running: 'i rute', noService: 'ikke i dag',
     lineOverview: 'Alle kjøretøy på', close: 'Lukk', follow: 'Følg kjøretøyet', towards: 'mot',
-    onTime: 'I rute', late: 'forsinket', early: 'tidlig', timetableOnly: 'Kun rutetid — ingen sanntid for denne turen',
+    onTime: 'I rute', late: 'forsinket', early: 'tidlig', timetableOnly: 'Bare rutetid, ingen sanntid for denne turen',
     liveData: 'Sanntid', nextStop: 'Neste', atStop: 'Ved', departed: 'Gikk fra', arrives: 'Ankommer', waiting: 'Venter på endeholdeplassen', waitingAt: 'Venter på', leaves: 'går',
     activeTrips: 'Kjøretøy på linjen nå', noActiveTrips: 'Ingen kjøretøy på linjen akkurat nå.',
     nextFrom: 'Neste avgang fra',
@@ -91,13 +91,13 @@ const copy = {
   }
 };
 Object.assign(copy.en, {
-  intro: 'Tell us where you are and where you want to go. We’ll find the best way there by bus, tram, T-bane, train or boat — with live times.',
+  intro: 'Tell us where you are and where you want to go. We find the best way there by bus, tram, T-bane, train or boat, with live times.',
   tripOptions: 'Ways to get there', planning: 'Finding the best way there…', planFailed: 'Couldn’t reach the journey planner. Showing direct rides from today’s timetable instead.',
   planNone: 'No trips found in the next few hours.', tripWalk: 'Walk', tripChanges: n => n === 0 ? 'Direct' : n === 1 ? '1 change' : `${n} changes`,
   tripTowards: 'towards', tripStops: n => n === 1 ? '1 stop' : `${n} stops`, tripLeaves: 'Leaves', tripLater: 'Later trips',
   tripCaveat: 'Planned by Entur, the same journey planner Ruter uses. Live times where available.',
   trackAt: (v, stop) => `${v} is at ${stop} now`, trackBetween: (v, a, b) => `${v} is between ${a} and ${b}`,
-  trackAtYours: v => `${v} is at your stop now — get on!`, trackLeft: (v, stop) => `${v} has already left ${stop}. Pick a later trip.`,
+  trackAtYours: v => `${v} is at your stop now. Get on!`, trackLeft: (v, stop) => `${v} has already left ${stop}. Pick a later trip.`,
   trackNotStarted: (v, stop, time) => `${v} starts from ${stop} at ${time}`, trackStartsHere: (v, time) => `${v} starts from your stop at ${time}`,
   trackAway: n => n === 1 ? '1 stop away' : `${n} stops away`, trackReaches: (stop, time) => `at ${stop} ${time}`,
   trackLive: 'live position', trackEstimate: 'estimated from the timetable', trackShow: 'Show it on the map', trackWhole: 'Whole trip',
@@ -116,7 +116,6 @@ Object.assign(copy.en, {
   explainWhereTitle: 'Where the vehicles come from',
   explainWhere: 'Ruter doesn’t share GPS positions. Instead, each vehicle is placed where today’s timetable says it should be, moving smoothly along the route between stops.',
   explainLiveTitle: 'Live updates',
-  explainLive: n => `For <b>${n}</b> of them — every T-bane, tram and boat, plus any line you pick — Entur sends live times. They shift the vehicle when it runs early or late, and get a <span class="ring-sample"></span> green ring.`,
   explainFreshTitle: 'How fresh it is',
   explainFresh: (date, time) => `Timetable for ${date}${time ? ` · live times checked at ${time}` : ''}. Departure boards near you are always live.`,
   explainMissing: 'Today’s timetable hasn’t been published yet, so vehicles aren’t shown. Departure boards near you still work.',
@@ -124,13 +123,13 @@ Object.assign(copy.en, {
   credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a> · Map © Kartverket · Place search: Entur'
 });
 Object.assign(copy.no, {
-  intro: 'Fortell oss hvor du er og hvor du skal. Vi finner beste reise med buss, trikk, T-bane, tog eller båt — med sanntid.',
+  intro: 'Fortell oss hvor du er og hvor du skal. Vi finner beste reise med buss, trikk, T-bane, tog eller båt, med sanntid.',
   tripOptions: 'Slik kommer du deg dit', planning: 'Finner beste reise …', planFailed: 'Fikk ikke kontakt med reiseplanleggeren. Viser direkte reiser fra dagens rutetabell i stedet.',
   planNone: 'Fant ingen reiser de neste timene.', tripWalk: 'Gå', tripChanges: n => n === 0 ? 'Direkte' : n === 1 ? '1 bytte' : `${n} bytter`,
   tripTowards: 'mot', tripStops: n => n === 1 ? '1 stopp' : `${n} stopp`, tripLeaves: 'Går', tripLater: 'Senere reiser',
   tripCaveat: 'Planlagt av Entur, samme reiseplanlegger som Ruter bruker. Sanntid der det finnes.',
   trackAt: (v, stop) => `${v} er ved ${stop} nå`, trackBetween: (v, a, b) => `${v} er mellom ${a} og ${b}`,
-  trackAtYours: v => `${v} står ved holdeplassen din nå — gå på!`, trackLeft: (v, stop) => `${v} har allerede gått fra ${stop}. Velg en senere reise.`,
+  trackAtYours: v => `${v} står ved holdeplassen din nå. Gå på!`, trackLeft: (v, stop) => `${v} har allerede gått fra ${stop}. Velg en senere reise.`,
   trackNotStarted: (v, stop, time) => `${v} starter fra ${stop} kl. ${time}`, trackStartsHere: (v, time) => `${v} starter fra holdeplassen din kl. ${time}`,
   trackAway: n => n === 1 ? '1 stopp unna' : `${n} stopp unna`, trackReaches: (stop, time) => `ved ${stop} ${time}`,
   trackLive: 'sanntidsposisjon', trackEstimate: 'beregnet fra rutetabellen', trackShow: 'Vis på kartet', trackWhole: 'Hele reisen',
@@ -149,7 +148,6 @@ Object.assign(copy.no, {
   explainWhereTitle: 'Hvor kjøretøyene kommer fra',
   explainWhere: 'Ruter deler ikke GPS-posisjoner. Hvert kjøretøy plasseres derfor der dagens rutetabell sier det skal være, og beveger seg jevnt langs ruten mellom holdeplassene.',
   explainLiveTitle: 'Sanntid',
-  explainLive: n => `For <b>${n}</b> av dem — alle T-baner, trikker og båter, pluss linjen du velger — sender Entur sanntid. Da flyttes kjøretøyet når det er tidlig eller sent ute, og får en <span class="ring-sample"></span> grønn ring.`,
   explainFreshTitle: 'Hvor ferskt det er',
   explainFresh: (date, time) => `Rutetabell for ${date}${time ? ` · sanntid sjekket ${time}` : ''}. Avgangstavlene i nærheten er alltid i sanntid.`,
   explainMissing: 'Dagens rutetabell er ikke publisert ennå, så kjøretøy vises ikke. Avgangstavlene i nærheten virker fortsatt.',
@@ -158,42 +156,46 @@ Object.assign(copy.no, {
 });
 Object.assign(copy.en, {
   explainTitle: 'How this map works',
-  whyTitle: 'Why this map exists',
-  why: 'Most travel apps tell you <i>when</i> to go. This map also shows you <i>where</i>: every bus, tram, T-bane and boat in Oslo moving at once, and exactly where your own ride is right now — so you know whether to walk, hurry, or finish your coffee.',
-  helpsTitle: 'What it does for you',
-  helpPlan: '<b>Plans the whole trip.</b> Type where you’re going and Entur’s journey planner — the same one Ruter uses — finds the best way, with changes and walking, anywhere in Norway.',
-  helpTrack: '<b>Shows where your ride is.</b> The best option opens with a live line like “Bus 31 is at Solli, 3 stops away”, and the map zooms to you, your stop and the moving vehicle.',
-  helpNear: '<b>Finds your five closest stops.</b> Share your location and they’re numbered on the map inside a circle reaching the fifth one, each with live departures.',
-  helpBrowse: '<b>Lets you explore.</b> Click any vehicle or line to see its stops and times, filter by T-bane, trikk, bus or boat, and switch between light and dark, English and Norwegian.',
-  vehiclesTitle: 'How the vehicles get on the map',
-  vehicles: n => `Ruter doesn’t publish GPS positions. Each vehicle is placed where today’s timetable says it should be and moves smoothly along its route between stops. Every T-bane, tram and boat — plus any line or trip you pick — is corrected with Entur’s live times when it runs early or late. Those vehicles get a <span class="ring-sample"></span> green ring${n ? ` (${n} right now)` : ''}.`,
-  freshTitle: 'How fresh it is',
-  fresh: (date, time) => `The timetable is rebuilt every night (now: ${date}). Live times were last checked ${time || '—'}. Trip plans, “where is my ride” and departure boards are always live.`,
+  whatTitle: 'What is this?',
+  what: 'A live map of public transport in Oslo. You see every bus, tram, T-bane and boat that is running right now, and they move as you watch. You can also plan a trip and see exactly where your bus is.',
+  planTitle: 'How do I find a trip?',
+  plan: ['Type where you are in <b>From</b>, or tap <b>Use my location</b>.', 'Type where you are going in <b>To</b>.', 'You get a few suggestions. Tap one to see the whole trip on the map.'],
+  planNote: 'The suggestions come from Entur, the same service Ruter uses.',
+  trackTitle: 'Where is my bus?',
+  track: 'When you open a suggestion, you see where your bus, tram or boat is right now. For example: “Bus 31 is at Solli, 3 stops away”. The map shows you, your stop and the vehicle. Then you know if you need to hurry.',
+  nearTitle: 'Which stops are close to me?',
+  near: 'Share your location and the map shows the five stops closest to you. They are numbered from 1 to 5, and number 1 is the closest. The circle around you reaches out to stop number 5. Tap a number to see the name of the stop and the next departures.',
+  vehiclesTitle: 'Where do the vehicles on the map come from?',
+  vehicles: n => `Ruter does not share GPS positions from its vehicles. So we work out where each one should be from today’s timetable. T-bane, trams and boats also get live times from Entur, so they move back when they are late. They have a <span class="ring-sample"></span> green ring${n ? ` (${n} right now)` : ''}. A bus or boat waiting at its last stop for the next trip stands still on the map.`,
+  moreTitle: 'What else can I do?',
+  more: ['Tap a vehicle or a line to see its stops and times.', 'Use the buttons at the top of the map to show only T-bane, tram, bus or boat.', 'Change language and light or dark mode at the top right.'],
+  freshTitle: 'How up to date is it?',
+  fresh: (date, time) => `The timetable is updated every night. The latest one is from ${date}. ${time ? `Live times were last fetched at ${time}.` : 'Live times have not been fetched yet.'}`,
   privacyTitle: 'Your privacy',
-  privacy: 'No account and no cookies. Your location is only used when you ask for it, and is sent to Entur just to find stops and plan trips. Your language and theme choice stay in your own browser.',
+  privacy: 'You do not need an account, and we use no cookies. Your location is only used when you ask for it. It is sent to Entur to find stops and trips, nothing else. Your language and theme choice are saved only in your own browser.',
   allDepartures: 'All departures',
-  nearTitle: 'Your five closest stops',
-  near: 'Tap <b>Use my location</b> (or type where you are). We find the five stops closest to you — bus, tram, T-bane, boat or train — and number them 1 to 5 on the map, nearest first. A dashed circle is drawn around you with radius <b>r</b>: the distance to the fifth stop. Everything inside it is within that walk, and the map zooms so the whole circle fits. Tap a number to see the stop’s name, what stops there and its next departures; the full live board is listed below.',
   footNow: (n, l) => `Right now ${n} buses, trams, trains and boats are on the move across ${l} lines.`
 });
 Object.assign(copy.no, {
   explainTitle: 'Slik fungerer kartet',
-  whyTitle: 'Hvorfor kartet finnes',
-  why: 'De fleste reiseapper forteller deg <i>når</i> du skal gå. Dette kartet viser deg også <i>hvor</i>: alle busser, trikker, T-baner og båter i Oslo i bevegelse samtidig, og nøyaktig hvor din egen avgang er akkurat nå — så du vet om du kan gå rolig, må skynde deg eller rekker å drikke opp kaffen.',
-  helpsTitle: 'Hva det gjør for deg',
-  helpPlan: '<b>Planlegger hele reisen.</b> Skriv hvor du skal, så finner Enturs reiseplanlegger — den samme som Ruter bruker — beste vei, med bytter og gange, hvor som helst i Norge.',
-  helpTrack: '<b>Viser hvor avgangen din er.</b> Beste forslag åpnes med en sanntidslinje som «Buss 31 er ved Solli, 3 stopp unna», og kartet zoomer inn på deg, holdeplassen og kjøretøyet.',
-  helpNear: '<b>Finner dine fem nærmeste holdeplasser.</b> Del posisjonen din, så nummereres de på kartet innenfor en sirkel ut til den femte, hver med avganger i sanntid.',
-  helpBrowse: '<b>Lar deg utforske.</b> Klikk på et kjøretøy eller en linje for å se stopp og tider, filtrer på T-bane, trikk, buss eller båt, og bytt mellom lyst og mørkt, norsk og engelsk.',
-  vehiclesTitle: 'Hvordan kjøretøyene havner på kartet',
-  vehicles: n => `Ruter publiserer ikke GPS-posisjoner. Hvert kjøretøy plasseres der dagens rutetabell sier det skal være, og beveger seg jevnt langs ruten mellom holdeplassene. Alle T-baner, trikker og båter — pluss linjen eller turen du velger — justeres med sanntid fra Entur når de er tidlig eller sent ute. De får en <span class="ring-sample"></span> grønn ring${n ? ` (${n} akkurat nå)` : ''}.`,
-  freshTitle: 'Hvor ferskt det er',
-  fresh: (date, time) => `Rutetabellen bygges på nytt hver natt (nå: ${date}). Sanntid sist sjekket ${time || '—'}. Reiseforslag, «hvor er avgangen min» og avgangstavler er alltid i sanntid.`,
+  whatTitle: 'Hva er dette?',
+  what: 'Et levende kart over kollektivtrafikken i Oslo. Du ser alle busser, trikker, T-baner og båter som kjører akkurat nå, og de flytter seg mens du ser på. Du kan også finne en reise og se nøyaktig hvor bussen din er.',
+  planTitle: 'Hvordan finner jeg en reise?',
+  plan: ['Skriv hvor du er i feltet <b>Fra</b>, eller trykk på <b>Bruk posisjonen min</b>.', 'Skriv hvor du skal i feltet <b>Til</b>.', 'Du får noen forslag. Trykk på et av dem for å se hele reisen på kartet.'],
+  planNote: 'Forslagene kommer fra Entur, den samme tjenesten som Ruter bruker.',
+  trackTitle: 'Hvor er bussen min?',
+  track: 'Når du åpner et forslag, ser du hvor bussen, trikken eller båten din er akkurat nå. For eksempel: «Buss 31 er ved Solli, 3 stopp unna». Kartet viser deg, holdeplassen og kjøretøyet. Da vet du om du må skynde deg.',
+  nearTitle: 'Hvilke holdeplasser er nær meg?',
+  near: 'Del posisjonen din, så viser kartet de fem holdeplassene som er nærmest deg. De har nummer fra 1 til 5, og nummer 1 er nærmest. Sirkelen rundt deg går ut til holdeplass nummer 5. Trykk på et nummer for å se navnet på holdeplassen og de neste avgangene.',
+  vehiclesTitle: 'Hvor kommer kjøretøyene på kartet fra?',
+  vehicles: n => `Ruter deler ikke GPS fra kjøretøyene sine. Derfor regner vi ut hvor hvert kjøretøy skal være etter dagens rutetabell. T-bane, trikk og båt får i tillegg sanntid fra Entur, så de flyttes når de er forsinket. De har en <span class="ring-sample"></span> grønn ring${n ? ` (${n} akkurat nå)` : ''}. En buss eller båt som venter på endeholdeplassen før neste tur, står stille på kartet.`,
+  moreTitle: 'Hva mer kan jeg gjøre?',
+  more: ['Trykk på et kjøretøy eller en linje for å se stopp og tider.', 'Bruk knappene øverst på kartet for å vise bare T-bane, trikk, buss eller båt.', 'Bytt språk og lyst eller mørkt tema øverst til høyre.'],
+  freshTitle: 'Hvor oppdatert er det?',
+  fresh: (date, time) => `Rutetabellen oppdateres hver natt. Den siste er fra ${date}. ${time ? `Sanntid ble sist hentet kl. ${time}.` : 'Sanntid er ikke hentet ennå.'}`,
   privacyTitle: 'Personvern',
-  privacy: 'Ingen konto og ingen informasjonskapsler. Posisjonen din brukes bare når du ber om det, og sendes til Entur kun for å finne holdeplasser og planlegge reiser. Valg av språk og tema lagres bare i nettleseren din.',
+  privacy: 'Du trenger ingen konto, og vi bruker ingen informasjonskapsler. Posisjonen din brukes bare når du ber om det. Den sendes til Entur for å finne holdeplasser og reiser, ikke noe annet. Valg av språk og tema lagres bare i din egen nettleser.',
   allDepartures: 'Alle avganger',
-  nearTitle: 'Dine fem nærmeste holdeplasser',
-  near: 'Trykk på <b>Bruk posisjonen min</b> (eller skriv hvor du er). Vi finner de fem holdeplassene nærmest deg — buss, trikk, T-bane, båt eller tog — og nummererer dem 1 til 5 på kartet, nærmeste først. Rundt deg tegnes en stiplet sirkel med radius <b>r</b>: avstanden til den femte holdeplassen. Alt innenfor er innen den gangavstanden, og kartet zoomer slik at hele sirkelen synes. Trykk på et nummer for å se navnet på holdeplassen, hva som stopper der og de neste avgangene; hele avgangstavlen står nedenfor.',
   footNow: (n, l) => `Akkurat nå er ${n} busser, trikker, tog og båter i bevegelse på ${l} linjer.`
 });
 let language = 'en';
@@ -1005,10 +1007,12 @@ function renderExplainer() {
   const section = (title, body) => `<div><h3>${escapeHTML(t(title))}</h3>${body}</div>`;
   const html = `<h2 class="section-title">${escapeHTML(t('explainTitle'))}</h2>
     <div class="explainer-grid">
-      ${section('whyTitle', `<p>${t('why')}</p>`)}
-      ${section('helpsTitle', `<ul class="helps">${['helpPlan', 'helpTrack', 'helpNear', 'helpBrowse'].map(key => `<li>${t(key)}</li>`).join('')}</ul>`)}
+      ${section('whatTitle', `<p>${t('what')}</p>`)}
+      ${section('planTitle', `<ol class="helps steps">${t('plan').map(step => `<li>${step}</li>`).join('')}</ol><p class="note">${t('planNote')}</p>`)}
+      ${section('trackTitle', `<p>${escapeHTML(t('track'))}</p>`)}
       ${section('nearTitle', `<p>${t('near')}</p>`)}
       ${section('vehiclesTitle', `<p>${t('vehicles')(live)}</p>`)}
+      ${section('moreTitle', `<ul class="helps">${t('more').map(item => `<li>${item}</li>`).join('')}</ul>`)}
       ${section('freshTitle', `<p>${escapeHTML(t('fresh')(date, lastRealtimeOk ? clockTime(lastRealtimeOk) : ''))}</p>`)}
       ${section('privacyTitle', `<p>${escapeHTML(t('privacy'))}</p>`)}
     </div>`;
@@ -1056,7 +1060,7 @@ function renderLineList() {
   const ready = timetable.status === 'ready';
   $('line-list').innerHTML = groups.filter(group => group.items.length).map(group => `<div class="line-group">${escapeHTML(t(group.mode))}</div>${group.items.map(route => {
     const count = counts.get(route.id) || 0;
-    const status = !ready ? '' : count ? `${count} ${t('running')}` : timetable.lines.has(route.id) ? '—' : t('noService');
+    const status = !ready ? '' : count ? `${count} ${t('running')}` : timetable.lines.has(route.id) ? '' : t('noService');
     return `<button type="button" class="line-item mode-${colorKey(route)}${focus === route.id ? ' selected' : ''}" data-route="${escapeHTML(route.id)}"><span class="badge sm mode-${colorKey(route)}">${escapeHTML(route.line)}</span><span class="line-text">${escapeHTML(route.description || route.name || '')}</span><span class="line-live${count ? ' on' : ''}">${escapeHTML(status)}</span></button>`;
   }).join('')}`).join('');
 }
@@ -1236,7 +1240,7 @@ function planCard(plan, index, now) {
   }
   const live = first?.realtime ? '<span class="rt-mark"></span>' : '';
   return `<div class="trip-card${open ? ' open' : ''}"><button type="button" class="trip-head" data-plan="${index}" aria-expanded="${open}">
-    <span class="trip-times"><b>${clockTime(plan.start)} – ${clockTime(plan.end)}</b><span class="trip-dur">${durationLabel(plan.end - plan.start)} · ${escapeHTML(t('tripChanges')(Math.max(0, transit.length - 1)))}</span></span>
+    <span class="trip-times"><b>${clockTime(plan.start)} → ${clockTime(plan.end)}</b><span class="trip-dur">${durationLabel(plan.end - plan.start)} · ${escapeHTML(t('tripChanges')(Math.max(0, transit.length - 1)))}</span></span>
     <span class="trip-leaves">${live}${escapeHTML(minutesUntil(plan.start, now))}</span>
     <span class="trip-chips">${chips}</span>
     <span class="trip-sub">${escapeHTML(sub)}</span></button>${steps}</div>`;
