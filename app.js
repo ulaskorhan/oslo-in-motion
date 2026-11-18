@@ -439,9 +439,9 @@ function ingest(file) {
 /* Layovers. Ruter doesn't publish which vehicle runs which trip, but at an end stop (Nesoddtangen, Aker brygge,
    Helsfyr …) a bus, tram or boat usually waits and then goes back out as the line's next trip from the same place.
    Each departure takes the most recent unused arrival of the same line at that stop (same name or within 250 m)
-   from the 30 minutes before it, and is shown waiting there from that arrival on. Arrivals no departure takes
+   from the 40 minutes before it, and is shown waiting there from that arrival on. Arrivals no departure takes
    (the vehicle goes to the garage or another line) simply disappear, so nothing stands around for hours. */
-const LAYOVER_MAX = 30 * 60000, LAYOVER_FALLBACK = 3 * 60000;
+const LAYOVER_MAX = 40 * 60000, LAYOVER_FALLBACK = 3 * 60000;
 function linkLayovers() {
   const firstQuay = trip => trip.pattern.quays[trip.pattern.s[0]];
   const lastQuay = trip => trip.pattern.quays[trip.pattern.s[trip.pattern.s.length - 1]];
