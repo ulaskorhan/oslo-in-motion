@@ -1,6 +1,6 @@
 # Oslo in Motion
 
-A live-looking transit map of Oslo: every scheduled Ruter vehicle, placed where the day's timetable says it should be. Where Entur has realtime estimates, the timetable is adjusted with them. https://ulaskorhan.github.io/oslo-in-motion/
+A live-looking transit map of Oslo: every scheduled Ruter vehicle, placed where the day's timetable says it should be. Where Entur has realtime estimates, the timetable is adjusted with them. Available at: https://ulaskorhan.github.io/oslo-in-motion/
 
 ## What the map shows
 
