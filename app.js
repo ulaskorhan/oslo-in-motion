@@ -91,6 +91,9 @@ const copy = {
   }
 };
 Object.assign(copy.en, {
+  themeAuto: 'Theme: automatic (follows your device). Click for light.',
+  themeLight: 'Theme: light. Click for dark.',
+  themeDark: 'Theme: dark. Click for automatic.',
   brandSub: 'Oslo public transport, live', heading: 'Where are you going?',
   intro: 'Tell us where you are and where you want to go. We’ll show the next direct bus, tram, T-bane or boat — with live times.',
   where: 'From', destination: 'To', placeHelp: 'Share your location or type a place.', locate: 'Use my location',
@@ -110,6 +113,9 @@ Object.assign(copy.en, {
   credits: 'Data: Entur (NLOD) · <a href="https://developer.entur.no/terms-of-service" target="_blank" rel="noreferrer">terms</a> · Map © Kartverket · Place search: Photon / OpenStreetMap'
 });
 Object.assign(copy.no, {
+  themeAuto: 'Tema: automatisk (følger enheten din). Klikk for lyst.',
+  themeLight: 'Tema: lyst. Klikk for mørkt.',
+  themeDark: 'Tema: mørkt. Klikk for automatisk.',
   brandSub: 'Kollektivtrafikk i Oslo, live', heading: 'Hvor skal du?',
   intro: 'Fortell oss hvor du er og hvor du skal. Vi viser neste direkte buss, trikk, T-bane eller båt — med sanntid.',
   where: 'Fra', destination: 'Til', placeHelp: 'Del posisjonen din eller skriv et sted.', locate: 'Bruk posisjonen min',
@@ -1285,6 +1291,7 @@ function applyLanguage(next) {
   document.querySelectorAll('.mode-chip').forEach(chip => { chip.querySelector('.mode-name').textContent = t(chip.dataset.mode); });
   $('lang-en').classList.toggle('active', language === 'en'); $('lang-no').classList.toggle('active', language === 'no');
   $('lang-en').setAttribute('aria-pressed', String(language === 'en')); $('lang-no').setAttribute('aria-pressed', String(language === 'no'));
+  renderThemeButton();
   renderLegend(); updateStats(); updateStatus(); renderLineList(); renderDetail(true); updateClock();
   if (nearbyStops.length) renderNearbyStops();
   if (destination) showDestination(destination.point, destination.label, false);
@@ -1293,7 +1300,32 @@ $('lang-en').addEventListener('click', () => applyLanguage('en'));
 $('lang-no').addEventListener('click', () => applyLanguage('no'));
 function updateClock() { $('clock').textContent = clockTime(Date.now(), true); }
 setInterval(updateClock, 1000);
-darkQuery.addEventListener('change', () => { readPalette(); styleRoutes(); vehicleLayer.draw(); });
+/** auto follows the device; light/dark are the visitor's own choice, remembered per browser. */
+let theme = document.documentElement.dataset.theme || 'auto';
+function renderThemeButton() {
+  const button = $('theme-toggle');
+  const label = t(theme === 'light' ? 'themeLight' : theme === 'dark' ? 'themeDark' : 'themeAuto');
+  button.dataset.mode = theme; button.title = label; button.setAttribute('aria-label', label);
+}
+function themeChanged() {
+  const dark = theme === 'dark' || (theme === 'auto' && darkQuery.matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+    if (theme === 'auto') meta.media = meta.dataset.media || meta.media;
+    else { meta.dataset.media = meta.dataset.media || meta.media; meta.media = 'all'; meta.content = dark ? '#121614' : '#f6f5f1'; }
+  });
+  readPalette(); styleRoutes(); vehicleLayer.draw();
+}
+function applyTheme(next) {
+  theme = next;
+  if (theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  try { theme === 'auto' ? localStorage.removeItem('oslo-in-motion-theme') : localStorage.setItem('oslo-in-motion-theme', theme); } catch { /* ignore */ }
+  renderThemeButton(); themeChanged();
+}
+$('theme-toggle').addEventListener('click', () => applyTheme({ auto: 'light', light: 'dark', dark: 'auto' }[theme]));
+renderThemeButton();
+if (theme !== 'auto') themeChanged();
+darkQuery.addEventListener('change', themeChanged);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshActive(); scheduleRealtime(0); } });
 
 // Pick up the next service day's file when the Oslo date rolls over on a long-open page.

@@ -64,6 +64,11 @@ a { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .status-dot.live { animation: none; } }
 .language-toggle { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
 .language-toggle button { border: 0; background: transparent; border-radius: 7px; padding: 4px 8px; color: var(--muted); font: 600 11px 'DM Mono', monospace; }
+.theme-toggle { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); color: var(--ink-2); }
+.theme-toggle:hover { color: var(--ink); }
+.theme-toggle svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: none; }
+.theme-toggle .fill { fill: currentColor; stroke: none; }
+.theme-toggle[data-mode="auto"] .ti-auto, .theme-toggle[data-mode="light"] .ti-light, .theme-toggle[data-mode="dark"] .ti-dark { display: block; }
 .language-toggle button.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px #0000001a; }
 .clock { font: 500 13px 'DM Mono', monospace; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 66px; text-align: right; }
 
@@ -292,7 +297,8 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 .leaflet-routes-bus-pane, .leaflet-routes-boat-pane, .leaflet-routes-tram-pane, .leaflet-routes-metro-pane, .leaflet-routes-selected-pane { filter: drop-shadow(0 2px 1.5px var(--lift)); }
 .map-wrap::after { content: ""; position: absolute; inset: 0; z-index: 450; pointer-events: none; box-shadow: inset 0 0 70px var(--vignette); }
 :root { --lift: rgba(20, 30, 25, .28); --vignette: rgba(30, 40, 35, .16); }
-@media (prefers-color-scheme: dark) { :root { --lift: rgba(0, 0, 0, .6); --vignette: rgba(0, 0, 0, .45); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --lift: rgba(0, 0, 0, .6); --vignette: rgba(0, 0, 0, .45); } }
+:root[data-theme="dark"] { --lift: rgba(0, 0, 0, .6); --vignette: rgba(0, 0, 0, .45); }
 .brand-text { display: flex; flex-direction: column; justify-content: center; }
 .brand-name { font: 800 19px/1 Manrope, sans-serif; letter-spacing: -.03em; }
 .brand-sub { margin-top: 3px; }
