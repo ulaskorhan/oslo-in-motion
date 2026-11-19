@@ -477,9 +477,9 @@ const scheduledArrival = (trip, i) => trip.origin + (trip.start + trip.pattern.a
 const scheduledDeparture = (trip, i) => trip.origin + (trip.start + trip.pattern.t[i]) * 1000;
 
 function tripState(trip, now) {
-  const n = trip.pattern.s.length;
-  if (now < departureAt(trip, 0)) return { prev: 0, next: 0, f: 0, dwell: true, before: true };
-  let lo = 1, hi = n - 1, k = n;
+  const start = trip.rt?.first ?? 0, n = (trip.rt?.last ?? trip.pattern.s.length - 1) + 1;
+  if (now < departureAt(trip, start)) return { prev: start, next: start, f: 0, dwell: true, before: true };
+  let lo = start + 1, hi = n - 1, k = n;
   while (lo <= hi) { const mid = (lo + hi) >> 1; if (arrivalAt(trip, mid) > now) { k = mid; hi = mid - 1; } else lo = mid + 1; }
   if (k === n) return { prev: n - 1, next: n - 1, f: 1, dwell: true, after: true };
   const prev = k - 1;
@@ -577,9 +577,13 @@ function applyRealtime(trip, calls) {
     const departure = Math.max(arrival, Number.isNaN(d) ? arrival : d);
     arr.push(arrival); dep.push(departure); previous = departure;
   }
-  trip.rt = { arr, dep, live: calls.some(call => call.realtime), cancelled: calls.every(call => call.cancellation), fetched: Date.now() };
-  trip.begin = dep[0];
-  trip.end = arr[arr.length - 1];
+  // A closed stretch often shows up as cancelled stops at the start or end of a trip: the vehicle then only runs
+  // between the first and last stop that are still served, and is not drawn on the closed part.
+  const first = calls.findIndex(call => !call.cancellation);
+  const last = calls.findLastIndex(call => !call.cancellation);
+  trip.rt = { arr, dep, live: calls.some(call => call.realtime), cancelled: first === -1 || first === last, first: Math.max(first, 0), last: Math.max(last, 0), fetched: Date.now() };
+  trip.begin = dep[trip.rt.first];
+  trip.end = arr[trip.rt.last];
 }
 
 /* ── Vehicle canvas ──────────────────────────────────────────────────────── */
@@ -673,11 +677,13 @@ function drawVehicles(ctx, ratio) {
       ctx.fillStyle = color; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = palette.panel; ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.fillText(text, x, y + 0.5);
+      item.shapes = [{ x, y, angle: 0, hl: w / 2 + 2, hw: h / 2 + 2 }];
       if (rank === 3) { ctx.beginPath(); ctx.arc(x, y, w / 2 + 9, 0, Math.PI * 2); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke(); }
     } else {
       ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = color; ctx.fill();
       ctx.lineWidth = live ? 1.8 : 1.2; ctx.strokeStyle = live ? palette.good : palette.panel; ctx.stroke();
+      item.shapes = [{ x, y, angle: 0, hl: radius + 1, hw: radius + 1 }];
     }
     drawn.push(item);
   }
@@ -706,7 +712,7 @@ function drawSilhouette(ctx, item, color, mpp) {
     const length = Math.max(Math.hypot(front.x - back.x, front.y - back.y), segment * k / mpp * 0.6);
     return { cx: (front.x + back.x) / 2, cy: (front.y + back.y) / 2, angle: Math.atan2(front.y - back.y, front.x - back.x), length, index };
   });
-  item.points = parts.map(part => ({ x: part.cx, y: part.cy }));
+  item.shapes = parts.map(part => ({ x: part.cx, y: part.cy, angle: part.angle, hl: part.length / 2, hw: width / 2 }));
   if (mode === 'boat') drawWake(ctx, parts[0], width);
   // Couplings between cars, drawn under the bodies.
   ctx.strokeStyle = shade(color, -0.35); ctx.lineWidth = width * 0.5; ctx.lineCap = 'butt';
@@ -794,18 +800,26 @@ function animate(time) {
 requestAnimationFrame(animate);
 setInterval(() => { refreshActive(); renderDetail(); followSelected(); }, 2000);
 
-function hitVehicle(point, tolerance = 14) {
-  let best = null, bestDistance = tolerance;
+/** The vehicle under a point: measured to the edge of each drawn shape (bus, train, pill or dot), not its centre,
+ *  so clicking the front of a long bus picks that bus and not a neighbour whose centre is closer. A point inside
+ *  several shapes picks the one drawn on top. Dimmed vehicles (another line is selected) count, but lose ties. */
+function hitVehicle(point, tolerance = 10) {
+  let best = null, bestDistance = Infinity;
   for (let i = drawn.length - 1; i >= 0; i--) {
     const item = drawn[i];
-    if (item.rank === 0) continue;
-    for (const p of item.points || [item]) {
-      const distance = Math.hypot(p.x - point.x, p.y - point.y);
-      if (distance < bestDistance) { best = item; bestDistance = distance; }
+    for (const shape of item.shapes || [{ x: item.x, y: item.y, angle: 0, hl: 4, hw: 4 }]) {
+      const dx = point.x - shape.x, dy = point.y - shape.y;
+      const cos = Math.cos(shape.angle), sin = Math.sin(shape.angle);
+      const along = Math.abs(dx * cos + dy * sin) - shape.hl, across = Math.abs(-dx * sin + dy * cos) - shape.hw;
+      const distance = Math.hypot(Math.max(along, 0), Math.max(across, 0)) + (item.rank === 0 ? 4 : 0);
+      if (distance <= tolerance && distance < bestDistance) { best = item; bestDistance = distance; }
     }
   }
   return best;
 }
+const coarsePointer = window.matchMedia('(pointer: coarse)');
+/** Fingers are less precise than a mouse, so taps get a wider margin around each vehicle. */
+const clickTolerance = event => (event.originalEvent?.pointerType === 'touch' || coarsePointer.matches ? 22 : 12);
 function hitRoute(point, tolerance = 7) {
   let best = null, bestDistance = tolerance;
   const bounds = map.getBounds().pad(0.1);
@@ -838,14 +852,14 @@ map.on('mousemove', event => {
   const delay = tripDelay(hit.trip, state);
   const delayText = delay == null ? t('scheduled') : delayLabel(delay).text;
   const where = state.before
-    ? `${escapeHTML(t('waitingAt'))} ${escapeHTML(nextQuay[0])} · ${escapeHTML(t('leaves'))} ${clockTime(departureAt(hit.trip, 0))}`
+    ? `${escapeHTML(t('waitingAt'))} ${escapeHTML(nextQuay[0])} · ${escapeHTML(t('leaves'))} ${clockTime(departureAt(hit.trip, state.prev))}`
     : `${escapeHTML(state.dwell ? t('atStop') : t('nextStop'))}: ${escapeHTML(nextQuay[0])} · ${escapeHTML(delayText)}`;
   tip.innerHTML = `<b>${escapeHTML(modeName(hit.trip.route))} ${escapeHTML(hit.trip.route.line)} → ${escapeHTML(hit.trip.pattern.h)}</b><small>${where}</small>`;
   tip.style.left = `${hit.x}px`; tip.style.top = `${hit.y}px`; tip.hidden = false;
 });
 map.on('mouseout', () => { tip.hidden = true; });
 map.on('click', event => {
-  const hit = hitVehicle(event.containerPoint, 18);
+  const hit = hitVehicle(event.containerPoint, clickTolerance(event));
   if (hit) { selectTrip(hit.trip); return; }
   const route = hitRoute(event.containerPoint);
   if (route) selectLine(route.id, false);
@@ -948,7 +962,7 @@ function tripDetailHTML(trip, now) {
   const tags = [];
   if (delay != null) { const d = delayLabel(delay); tags.push(`<span class="tag live"><span class="rt-mark"></span>${escapeHTML(t('liveData'))}</span>`); tags.push(`<span class="tag ${d.cls === 'late' ? 'late' : ''}">${escapeHTML(d.text)}</span>`); }
   else tags.push(`<span class="tag">${escapeHTML(t('timetableOnly'))}</span>`);
-  if (state.before) tags.push(`<span class="tag">${escapeHTML(t('waiting'))} · ${escapeHTML(t('leaves'))} ${clockTime(departureAt(trip, 0))}</span>`);
+  if (state.before) tags.push(`<span class="tag">${escapeHTML(t('waiting'))} · ${escapeHTML(t('leaves'))} ${clockTime(departureAt(trip, state.prev))}</span>`);
   // Timeline window: one passed stop, the current/next stops, then the terminus.
   const n = pattern.s.length, current = state.dwell ? state.prev : state.next;
   const first = Math.max(0, current - 1), last = Math.min(n - 1, current + 7);
