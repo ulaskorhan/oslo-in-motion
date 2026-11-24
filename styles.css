@@ -447,4 +447,17 @@ main { min-height: 0; display: grid; grid-template-columns: 380px 1fr; }
 .sp-dest { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sp-time { font: 500 11.5px 'DM Mono', monospace; white-space: nowrap; }
 .sp-hint { color: var(--muted); font-size: 11.5px; }
+.sp-label { margin-top: 9px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.sp-label + .sp-list { margin-top: 5px; }
+.sp-time { text-align: right; }
+.sp-time small { display: block; color: var(--muted); font-size: 10px; line-height: 1.1; }
+.sp-dep.cancelled .sp-dest, .sp-dep.cancelled .sp-time { text-decoration: line-through; opacity: .6; }
+.sp-lines { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; max-height: 96px; overflow-y: auto; }
+.sp-lines .badge { border: 0; cursor: pointer; min-height: 26px; }
+.stop-sheet { position: absolute; z-index: 1001; left: 8px; right: 8px; bottom: 8px; max-height: calc(100% - 62px); overflow-y: auto; overscroll-behavior: contain; padding: 11px 12px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); font: 400 12px/1.4 'DM Sans', sans-serif; }
+.stop-sheet[hidden] { display: none; }
+.stop-sheet .sp-head { padding-right: 0; justify-content: space-between; }
+.stop-sheet .icon-close { flex: none; }
+.stop-sheet .sp-lines { max-height: none; }
+.sp-note { margin-top: 8px; color: var(--muted); font-size: 10.5px; }
 .sp-more { border: 0; background: none; padding: 2px 0; color: var(--accent); font-weight: 600; font-size: 11.5px; }

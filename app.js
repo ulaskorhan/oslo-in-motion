@@ -168,12 +168,13 @@ Object.assign(copy.en, {
   vehiclesTitle: 'Where do the vehicles on the map come from?',
   vehicles: n => `Ruter does not share GPS positions from its vehicles. So we work out where each one should be from today’s timetable. T-bane, trams and boats also get live times from Entur, so they move back when they are late. They have a <span class="ring-sample"></span> green ring${n ? ` (${n} right now)` : ''}. A bus or boat waiting at its last stop for the next trip stands still on the map.`,
   moreTitle: 'What else can I do?',
-  more: ['Tap a vehicle or a line to see its stops and times.', 'Use the buttons at the top of the map to show only T-bane, tram, bus or boat.', 'Change language and light or dark mode at the top right.'],
+  more: ['Tap a vehicle or a line to see its stops and times.', 'Zoom in and tap a stop to see the next departures and which lines stop there.', 'Use the buttons at the top of the map to show only T-bane, tram, bus or boat.', 'Change language and light or dark mode at the top right.'],
   freshTitle: 'How up to date is it?',
   fresh: (date, time) => `The timetable is updated every night. The latest one is from ${date}. ${time ? `Live times were last fetched at ${time}.` : 'Live times have not been fetched yet.'}`,
   privacyTitle: 'Your privacy',
   privacy: 'You do not need an account, and we use no cookies. Your location is only used when you ask for it. It is sent to Entur to find stops and trips, nothing else. Your language and theme choice are saved only in your own browser.',
   allDepartures: 'All departures',
+  nextDepartures: 'Next departures', linesHere: 'Lines that stop here', stopTimetableOnly: 'Live times are unavailable right now, so these are timetable times.',
   footNow: (n, l) => `Right now ${n} buses, trams, trains and boats are on the move across ${l} lines.`
 });
 Object.assign(copy.no, {
@@ -190,12 +191,13 @@ Object.assign(copy.no, {
   vehiclesTitle: 'Hvor kommer kjøretøyene på kartet fra?',
   vehicles: n => `Ruter deler ikke GPS fra kjøretøyene sine. Derfor regner vi ut hvor hvert kjøretøy skal være etter dagens rutetabell. T-bane, trikk og båt får i tillegg sanntid fra Entur, så de flyttes når de er forsinket. De har en <span class="ring-sample"></span> grønn ring${n ? ` (${n} akkurat nå)` : ''}. En buss eller båt som venter på endeholdeplassen før neste tur, står stille på kartet.`,
   moreTitle: 'Hva mer kan jeg gjøre?',
-  more: ['Trykk på et kjøretøy eller en linje for å se stopp og tider.', 'Bruk knappene øverst på kartet for å vise bare T-bane, trikk, buss eller båt.', 'Bytt språk og lyst eller mørkt tema øverst til høyre.'],
+  more: ['Trykk på et kjøretøy eller en linje for å se stopp og tider.', 'Zoom inn på kartet og trykk på en holdeplass for å se neste avganger og hvilke linjer som stopper der.', 'Bruk knappene øverst på kartet for å vise bare T-bane, trikk, buss eller båt.', 'Bytt språk og lyst eller mørkt tema øverst til høyre.'],
   freshTitle: 'Hvor oppdatert er det?',
   fresh: (date, time) => `Rutetabellen oppdateres hver natt. Den siste er fra ${date}. ${time ? `Sanntid ble sist hentet kl. ${time}.` : 'Sanntid er ikke hentet ennå.'}`,
   privacyTitle: 'Personvern',
   privacy: 'Du trenger ingen konto, og vi bruker ingen informasjonskapsler. Posisjonen din brukes bare når du ber om det. Den sendes til Entur for å finne holdeplasser og reiser, ikke noe annet. Valg av språk og tema lagres bare i din egen nettleser.',
   allDepartures: 'Alle avganger',
+  nextDepartures: 'Neste avganger', linesHere: 'Linjer som stopper her', stopTimetableOnly: 'Sanntid er ikke tilgjengelig akkurat nå, så dette er tider fra rutetabellen.',
   footNow: (n, l) => `Akkurat nå er ${n} busser, trikker, tog og båter i bevegelse på ${l} linjer.`
 });
 let language = 'en';
@@ -396,6 +398,7 @@ async function loadTimetable() {
     const files = await Promise.all(dates.map(date => fetch(`data/timetable-${date}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })));
     files.forEach(ingest);
     linkLayovers();
+    buildMapStops();
     timetable.dates = dates;
     timetable.status = 'ready';
   } catch (error) {
@@ -618,6 +621,7 @@ const VEHICLE_SPECS = {
   boat: { segments: [34], width: 9, gap: 0, minLength: 44, minWidth: 16 }
 };
 let drawn = []; // [{trip, x, y}] for hit-testing
+let mapStops = [], drawnStops = []; // every stop in the timetable, and the ones drawn this frame (for taps)
 const vehicleLayer = new VehicleLayer().addTo(map);
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 /* Top-down vehicle shapes (zoom ≥ 15). Real dimensions in metres; when zoomed out the
@@ -636,6 +640,7 @@ function drawVehicles(ctx, ratio) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, size.x, size.y);
   drawn = [];
+  drawMapStops(ctx, size);
   const now = Date.now(), zoom = map.getZoom();
   const focus = selectedRouteId();
   const selectedTrip = selection?.type === 'trip' ? selection.trip : null;
@@ -844,7 +849,13 @@ function hitRoute(point, tolerance = 7) {
 const tip = $('vehicle-tip');
 map.on('mousemove', event => {
   const hit = hitVehicle(event.containerPoint);
-  map.getContainer().style.cursor = hit ? 'pointer' : '';
+  const stop = hit ? null : hitStop(event.containerPoint, 6);
+  map.getContainer().style.cursor = hit || stop ? 'pointer' : '';
+  if (stop) {
+    tip.innerHTML = `<b>${escapeHTML(stop.stop.name)}</b><small>${escapeHTML(stop.stop.lines.map(route => route.line).join(' · '))}</small>`;
+    tip.style.left = `${stop.x}px`; tip.style.top = `${stop.y}px`; tip.hidden = false;
+    return;
+  }
   if (!hit) { tip.hidden = true; return; }
   const state = tripState(hit.trip, Date.now());
   const quays = hit.trip.pattern.quays;
@@ -861,6 +872,9 @@ map.on('mouseout', () => { tip.hidden = true; });
 map.on('click', event => {
   const hit = hitVehicle(event.containerPoint, clickTolerance(event));
   if (hit) { selectTrip(hit.trip); return; }
+  const stop = hitStop(event.containerPoint, clickTolerance(event) - 2);
+  if (stop) { openMapStop(stop.stop, stop.point); return; }
+  if (mapStopOpen?.sheet) closeMapStop();
   const route = hitRoute(event.containerPoint);
   if (route) selectLine(route.id, false);
 });
@@ -1682,6 +1696,165 @@ function refreshStopPopup() {
   const stop = nearbyStops.find(item => item.id === popupStopId);
   if (stop && map.hasLayer(stopPopup)) { stopPopup.setContent(stopPopupHTML(stop)); map.fire('popupopen', { popup: stopPopup }); }
 }
+
+/* ── Stops on the map ──────────────────────────────────────────────────────
+   Every stop in the day's timetable is drawn as a small ring once you zoom in (T-bane, tram and boat stops from
+   zoom 14, all stops from zoom 15). Tapping one opens a card with the next departures from Entur and every line
+   that stops there. Quays with the same name close together (both sides of a street) count as one stop. */
+const MODE_RANK = { metro: 0, tram: 1, boat: 2, bus: 3 };
+const byModeAndLine = (a, b) => MODE_RANK[a.mode] - MODE_RANK[b.mode] || a.line.localeCompare(b.line, 'nb', { numeric: true });
+function buildMapStops() {
+  const byName = new Map();
+  for (const quay of timetable.quayIndex) {
+    if (!quay.served.length) continue;
+    const group = byName.get(quay.name) || [];
+    let stop = group.find(item => item.quays.some(other => metres([other.lat, other.lng], [quay.lat, quay.lng]) < 250));
+    if (!stop) { stop = { name: quay.name, quays: [], points: new Map() }; group.push(stop); byName.set(quay.name, group); }
+    stop.quays.push(quay);
+    // One ring per platform or kerb position; the same quay in yesterday's and today's file is drawn once.
+    const key = `${quay.lat},${quay.lng}`;
+    if (!stop.points.has(key)) stop.points.set(key, { lat: quay.lat, lng: quay.lng, routes: new Set() });
+    quay.served.forEach(({ pattern }) => stop.points.get(key).routes.add(routeById.get(pattern.routeId)));
+  }
+  mapStops = [...byName.values()].flat().map(stop => {
+    const points = [...stop.points.values()].map(point => ({ lat: point.lat, lng: point.lng, routes: [...point.routes].filter(Boolean).sort(byModeAndLine) }));
+    const lines = [...new Set(points.flatMap(point => point.routes))].sort(byModeAndLine);
+    return { name: stop.name, quays: stop.quays, points, lines, modes: [...new Set(lines.map(route => route.mode))], lat: points[0].lat, lng: points[0].lng };
+  });
+}
+function drawMapStops(ctx, size) {
+  drawnStops = [];
+  const zoom = map.getZoom();
+  if (zoom < 14 || !mapStops.length) return;
+  const bounds = map.getBounds().pad(0.05);
+  const radius = zoom >= 17 ? 5.5 : zoom >= 16 ? 4.5 : 3.6;
+  ctx.lineWidth = zoom >= 16 ? 2.4 : 2;
+  for (const stop of mapStops) {
+    for (const point of stop.points) {
+      if (!bounds.contains([point.lat, point.lng])) continue;
+      const route = point.routes.find(line => selectedModes.has(line.mode));
+      if (!route || (zoom < 15 && route.mode === 'bus')) continue;
+      const p = map.latLngToContainerPoint([point.lat, point.lng]);
+      const open = mapStopOpen?.stop === stop, r = open ? radius + 2.5 : radius;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = open ? palette[colorKey(route)] : palette.panel; ctx.fill();
+      ctx.strokeStyle = open ? palette.panel : palette[colorKey(route)]; ctx.stroke();
+      drawnStops.push({ stop, point, x: p.x, y: p.y, r: radius });
+    }
+  }
+}
+function hitStop(point, tolerance) {
+  let best = null, bestDistance = Infinity;
+  for (const item of drawnStops) {
+    const distance = Math.hypot(point.x - item.x, point.y - item.y) - item.r;
+    if (distance <= tolerance && distance < bestDistance) { best = item; bestDistance = distance; }
+  }
+  return best;
+}
+/* On a computer the stop card is a popup next to the stop. On a phone the map is too small for that, so the card
+   slides up from the bottom of the map instead, and the tapped stop gets a bold ring. */
+const mapStopPopup = L.popup({ className: 'stop-popup', offset: [0, -4], maxWidth: 300, minWidth: 240, autoPanPaddingTopLeft: [20, 60], autoPanPaddingBottomRight: [20, 20] });
+const stopSheet = $('stop-sheet');
+let mapStopOpen = null, mapStopTimer = null, mapStopController = null;
+const useStopSheet = () => map.getSize().y < 560 || map.getSize().x < 520;
+function closeMapStop() {
+  mapStopOpen = null; clearTimeout(mapStopTimer); mapStopController?.abort();
+  stopSheet.hidden = true; stopSheet.innerHTML = '';
+  if (map.hasLayer(mapStopPopup)) map.closePopup(mapStopPopup);
+}
+mapStopPopup.on('remove', () => { if (mapStopOpen && !mapStopOpen.sheet) closeMapStop(); });
+function openMapStop(stop, point = stop) {
+  tip.hidden = true;
+  closeMapStop();
+  mapStopOpen = { stop, point, calls: null, error: false, fetched: 0, sheet: useStopSheet() };
+  if (mapStopOpen.sheet) stopSheet.hidden = false;
+  else mapStopPopup.setLatLng([point.lat, point.lng]).setContent(mapStopHTML()).openOn(map);
+  refreshMapStop();
+  loadMapStopDepartures(stop);
+}
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && mapStopOpen) closeMapStop(); });
+/** Ask Entur for the stop places right here (same name first) and merge their next departures. */
+async function loadMapStopDepartures(stop) {
+  clearTimeout(mapStopTimer); mapStopController?.abort();
+  const controller = new AbortController(); mapStopController = controller;
+  const at = mapStopOpen?.point || stop;
+  const calls = 'realtime cancellation aimedDepartureTime expectedDepartureTime destinationDisplay { frontText } quay { publicCode } serviceJourney { id journeyPattern { line { publicCode transportMode } } }';
+  const query = `{ nearest(latitude:${at.lat}, longitude:${at.lng}, maximumDistance:250, filterByPlaceTypes:[stopPlace], first:4) { edges { node { distance place { ... on StopPlace { id name estimatedCalls(timeRange: 7200, numberOfDepartures: 14, includeCancelledTrips: true) { ${calls} } } } } } } }`;
+  try {
+    const response = await fetch(JOURNEY_PLANNER, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json', 'ET-Client-Name': CLIENT_NAME }, body: JSON.stringify({ query }) });
+    if (!response.ok) throw new Error(`Stop ${response.status}`);
+    const payload = await response.json();
+    if (payload.errors?.length) throw new Error(payload.errors[0].message);
+    const places = (payload.data?.nearest?.edges || []).map(edge => edge.node?.place).filter(place => place?.estimatedCalls);
+    const simple = name => name.toLowerCase().replace(/\s+(t|stasjon|brygge)$/, '');
+    const same = places.filter(place => simple(place.name) === simple(stop.name));
+    const chosen = same.length ? same : places.slice(0, 1);
+    const seen = new Set();
+    const merged = chosen.flatMap(place => place.estimatedCalls)
+      .filter(call => { const key = call.serviceJourney?.id + call.aimedDepartureTime; if (seen.has(key)) return false; seen.add(key); return true; })
+      .sort((a, b) => Date.parse(a.expectedDepartureTime) - Date.parse(b.expectedDepartureTime));
+    if (mapStopOpen?.stop !== stop) return;
+    Object.assign(mapStopOpen, { calls: merged, error: false, fetched: Date.now() });
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    if (mapStopOpen?.stop !== stop) return;
+    mapStopOpen.error = true;
+  }
+  refreshMapStop();
+  if (mapStopOpen?.stop === stop && mapStopController === controller) mapStopTimer = setTimeout(() => loadMapStopDepartures(stop), 20000);
+}
+/** Without Entur, the day's timetable still knows when each line is due here. */
+function timetableDepartures(stop) {
+  const now = Date.now(), until = now + 2 * 3600000, out = [];
+  for (const quay of stop.quays) {
+    for (const { pattern, pos } of quay.served) {
+      if (pos === pattern.s.length - 1) continue;
+      for (const trip of timetable.lines.get(pattern.routeId)?.trips || []) {
+        if (trip.pattern !== pattern || trip.rt?.cancelled) continue;
+        const at = departureAt(trip, pos);
+        if (at >= now - 30000 && at <= until) out.push({ route: trip.route, to: pattern.h, at, live: !!trip.rt?.live });
+      }
+    }
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+function depRowHTML({ code, mode, to, at, live, cancelled }, now) {
+  const mins = Math.floor((at - now) / 60000);
+  const when = cancelled ? t('cancelled') : mins < 1 ? t('now') : mins < 15 ? `${mins} ${t('min')}` : clockTime(at);
+  return `<div class="sp-dep${cancelled ? ' cancelled' : ''}"><span class="badge sm mode-${mode}">${escapeHTML(code || '—')}</span><span class="sp-dest">${escapeHTML(to || '')}</span><span class="sp-time">${live && !cancelled ? '<span class="rt-mark"></span>' : ''}${escapeHTML(when)}${mins >= 1 && mins < 15 && !cancelled ? `<small>${clockTime(at)}</small>` : ''}</span></div>`;
+}
+function mapStopHTML() {
+  const { stop, calls, error, fetched } = mapStopOpen;
+  const now = Date.now();
+  const modes = stop.modes.map(mode => `<i class="mode-${mode}"></i>${escapeHTML(modeLabel(mode))}`).join(' ');
+  let rows;
+  if (calls) {
+    rows = calls.filter(call => Date.parse(call.expectedDepartureTime) > now - 30000).slice(0, 6).map(call => {
+      const line = call.serviceJourney?.journeyPattern?.line || {};
+      return depRowHTML({ code: line.publicCode, mode: modeFromTransport(line.transportMode, line.publicCode), to: call.destinationDisplay?.frontText, at: Date.parse(call.expectedDepartureTime), live: call.realtime, cancelled: call.cancellation }, now);
+    });
+  } else if (error) {
+    rows = timetableDepartures(stop).slice(0, 6).map(dep => depRowHTML({ code: dep.route.line, mode: colorKey(dep.route), to: dep.to, at: dep.at, live: dep.live }, now));
+  }
+  const list = !rows ? `<div class="sp-hint">${escapeHTML(t('departuresLoading'))}</div>`
+    : rows.length ? rows.join('') : `<div class="sp-hint">${escapeHTML(t('departuresNone'))}</div>`;
+  const note = error ? t('stopTimetableOnly') : fetched ? `${t('updated')} ${clockTime(fetched, true)}` : '';
+  const lines = stop.lines.map(route => `<button type="button" class="badge sm mode-${colorKey(route)}" data-line="${escapeHTML(route.id)}" title="${escapeHTML(route.description || route.name || '')}">${escapeHTML(route.line)}</button>`).join('');
+  return `<div class="sp-head"><span><b>${escapeHTML(stop.name)}</b><small>${modes}</small></span>${mapStopOpen.sheet ? `<button type="button" class="icon-close" data-close aria-label="${escapeHTML(t('close'))}">×</button>` : ''}</div>
+    <div class="sp-label">${escapeHTML(t('nextDepartures'))}</div><div class="sp-list">${list}</div>
+    <div class="sp-label">${escapeHTML(t('linesHere'))}</div><div class="sp-lines">${lines}</div>
+    ${note ? `<div class="sp-note">${escapeHTML(note)}</div>` : ''}`;
+}
+function refreshMapStop() {
+  if (!mapStopOpen) return;
+  let root;
+  if (mapStopOpen.sheet) { stopSheet.innerHTML = mapStopHTML(); root = stopSheet; }
+  else if (map.hasLayer(mapStopPopup)) { mapStopPopup.setContent(mapStopHTML()); root = mapStopPopup.getElement(); }
+  root?.querySelector('[data-close]')?.addEventListener('click', closeMapStop);
+  root?.querySelectorAll('[data-line]').forEach(button => button.addEventListener('click', () => { const id = button.dataset.line; closeMapStop(); selectLine(id); }));
+}
+setInterval(refreshMapStop, 15000);
+
 async function loadDepartures(stop) {
   departuresController?.abort(); clearTimeout(departuresTimer);
   const controller = new AbortController(); departuresController = controller;
